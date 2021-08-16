@@ -350,7 +350,7 @@ class ImageDataset(Dataset):
             data_split, resize_to=resize_to, crop_size=crop_size
         )
 
-        self.captions_per_image = 5
+        self.captions_per_image = 1
 
         if data_split == 'dev' and len(self.length) > 5000:
             self.length = 5000
@@ -370,7 +370,7 @@ class ImageDataset(Dataset):
     def load_img(self, image_id):
 
         filename = self.data_wrapper.get_filename_by_image_id(image_id)
-        feat_path = self.full_path / filename
+        feat_path = self.data_path / filename
         try:
             image = default_loader(feat_path)
             image = self.transform(image)
