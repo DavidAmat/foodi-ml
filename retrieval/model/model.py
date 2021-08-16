@@ -131,7 +131,7 @@ class Retrieval(nn.Module):
         return txt_embed
 
     def forward_batch(self, batch):
-        img_embed = self.embed_images(batch)
+        img_embed = self.embed_images(batch['image'].to(self.img_enc.device))
         txt_embed = self.embed_captions(batch)
         return img_embed, txt_embed
 

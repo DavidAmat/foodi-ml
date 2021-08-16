@@ -27,12 +27,12 @@ model:
     devices: [cuda,]
     pooling: none
   similarity:
-    name: adapt_t2i
-    params:
-      latent_size: 1024
-      gamma: 10
-      train_gamma: False
-      device: cuda
+    name: cosine
+    #params:
+    #  latent_size: 1024
+    #  gamma: 10
+    #  train_gamma: False
+    #  device: cuda
     device: cuda
 optimizer:
   name: adamax

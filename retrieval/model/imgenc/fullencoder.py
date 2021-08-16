@@ -93,6 +93,10 @@ class ImageEncoder(nn.Module):
 
     def forward(self, images):
         """Extract image feature vectors."""
+        if type(images) == dict:
+            batch = images
+            assert 'image' in batch, 'Key image not in batch dictionary'
+            images = batch['image']
         # assuming that the precomputed features are already l2-normalized
         features = self.cnn(images)
         B, D, H, W = features.shape
@@ -254,6 +258,7 @@ class FullImageEncoder(nn.Module):
 
     def forward(self, images):
         """Extract image feature vectors."""
+
         # assuming that the precomputed features are already l2-normalized
         features = self.cnn(images)
 
@@ -282,7 +287,6 @@ class FullImageEncoder(nn.Module):
         )
 
         super(FullImageEncoder, self).load_state_dict(new_state)
-
 
 class FullHierImageEncoder(nn.Module):
 
