@@ -108,7 +108,6 @@ class ContrastiveLoss(nn.Module):
     def __repr__(self):
         return((
             f'ContrastiveLoss (margin={self.margin}, '
-            f'device={self.device}, '
             f'similarity_fn={self.sim}, '
             f'weight={self.weight}, '
             f'max_violation={self.max_violation}, '

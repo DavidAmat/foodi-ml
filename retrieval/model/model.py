@@ -89,7 +89,10 @@ class Retrieval(nn.Module):
             self.txt_enc = data_parallel.DataParallel(self.txt_enc)
             self.txt_enc.device = torch.device('cuda')
         elif len(txt_devices) == 1:
-            self.txt_enc.to(txt_devices[0])
+            try:
+                self.txt_enc.to(txt_devices[0])
+            except:
+                self.txt_enc.to(txt_devices[0])
             self.txt_enc.device = torch.device(txt_devices[0])
 
         if len(img_devices) > 1:
