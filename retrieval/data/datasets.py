@@ -325,7 +325,7 @@ class ImageDataset(Dataset):
         data_split, tokenizer, lang='en',
         resize_to=256, crop_size=224,
     ):
-        from .adapters import Flickr, Coco
+        from .adapters import FoodiML
 
         logger.debug(f'ImageDataset\n {[data_path, data_split, tokenizer, lang]}')
         self.tokenizer = tokenizer
@@ -337,11 +337,7 @@ class ImageDataset(Dataset):
         self.full_path = self.data_path / self.data_name
 
         self.data_wrapper = (
-            Flickr(
-                self.full_path,
-                data_split=data_split,
-            ) if 'f30k' in data_name
-            else Coco(
+            FoodiML(
                 self.full_path,
                 data_split=data_split,
             )

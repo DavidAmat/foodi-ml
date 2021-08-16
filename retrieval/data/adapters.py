@@ -7,6 +7,27 @@ from pathlib import Path
 logger = get_logger()
 
 
+class FoodiML:
+
+    def __init__(self, data_path, data_split):
+
+        data_split = data_split.replace('dev', 'val')
+
+        self.data_path = Path(data_path)
+        self.annotation_path = (
+            self.data_path / 'dataset_foodiml.json'
+        )
+        self.data = load_json(self.annotation_path)
+        self.image_ids, self.img_dict, self.img_captions = self._get_img_ids(data_split)
+
+        for k, v in self.img_captions.items():
+            assert len(v) >= 1
+
+        logger.info((
+            f'[FoodiML] Loaded {len(self.img_captions)} images '
+            f'and {len(self.img_captions)} annotations.'
+        ))
+
 class Flickr:
 
     def __init__(self, data_path, data_split):

@@ -1,6 +1,6 @@
 dataset:
   text_repr: word
-  loader_name: precomp
+  loader_name: image
   train:
     batch_size: 128
     workers: 1
