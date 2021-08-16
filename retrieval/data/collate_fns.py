@@ -80,17 +80,7 @@ class Collate:
         attributes = data[0].keys()
 
         batch = Dict()
-        if len(data[0]['caption']) == 2:
-            words, chars = zip(*[x['caption'] for x in data])
-            words = default_padding(words)
-            char = liwe_padding(chars)
-            batch['caption'] = (words, char)
-        else:
-            batch['caption'] = self.padding([x['caption'][0] for x in data])
-
         for att in attributes:
-            if att == 'caption':
-                continue
             batch[att] = _preprocessing_fn[att]([x[att] for x in data])
 
         return batch

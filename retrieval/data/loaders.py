@@ -66,7 +66,7 @@ def get_loader(
         data_path=data_path,
         data_name=data_name,
         data_split=data_split,
-        tokenizers=tokenizers[0],
+        tokenizer=tokenizers[0],
         lang=lang,
     )
     logger.debug(f'Dataset built: {dataset}')

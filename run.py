@@ -27,7 +27,7 @@ def get_data_path(opt):
 
 
 def get_tokenizers(train_loader):
-    tokenizers = train_loader.dataset.tokenizers
+    tokenizers = train_loader.dataset.tokenizer
     if type(tokenizers) != list:
         tokenizers = [tokenizers]
     return tokenizers

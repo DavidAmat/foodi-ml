@@ -352,8 +352,8 @@ class ImageDataset(Dataset):
 
         self.captions_per_image = 1
 
-        if data_split == 'dev' and len(self.length) > 5000:
-            self.length = 5000
+        #if data_split == 'dev' and len(self.length) > 5000:
+        #    self.length = 5000
 
         logger.debug(f'Split size: {len(self.ids)}')
 
@@ -390,7 +390,14 @@ class ImageDataset(Dataset):
         caption = self.captions[index]
         cap_tokens = self.tokenizer(caption)
 
-        return image, cap_tokens, index, image_id
+        batch = Dict(
+            image=image,
+            caption=cap_tokens,
+            index=index,
+            img_id=image_id,
+        )
+        #return image, cap_tokens, index, image_id
+        return batch
 
     def __len__(self):
         return self.length
