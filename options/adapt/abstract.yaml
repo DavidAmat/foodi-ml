@@ -21,7 +21,7 @@ model:
     pooling: none
     devices: [cuda,]
   img_enc:
-    name: simple
+    name: resnet50 #simple
     params:
       img_dim: 2048
     devices: [cuda,]

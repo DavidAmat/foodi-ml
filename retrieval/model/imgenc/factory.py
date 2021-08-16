@@ -88,20 +88,20 @@ def get_available_imgenc():
     return _image_encoders.keys()
 
 
-# def get_image_encoder(name, **kwargs):
-#     model_settings = _image_encoders[name]
-#     model_class = model_settings['class']
-#     model_args = model_settings['args']
-#     arg_dict = dict(kwargs)
-#     arg_dict.update(model_args)
-#     model = model_class(**arg_dict)
-#     return model
-
-
 def get_image_encoder(name, **kwargs):
-    model_class = _image_encoders[name]['class']
-    model = model_class(**kwargs)
-    return model
+     model_settings = _image_encoders[name]
+     model_class = model_settings['class']
+     model_args = model_settings['args']
+     arg_dict = dict(kwargs)
+     arg_dict.update(model_args)
+     model = model_class(**arg_dict)
+     return model
+
+
+#def get_image_encoder(name, **kwargs):
+#    model_class = _image_encoders[name]['class']
+#    model = model_class(**kwargs)
+#    return model
 
 
 def get_img_pooling(pool_name):
