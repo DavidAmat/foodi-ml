@@ -5,7 +5,7 @@ dataset:
     batch_size: 128
     workers: 1
   val:
-    batch_size: 32
+    batch_size: 128
     limit: 5000
   adapt:
     data: []
@@ -54,6 +54,6 @@ criterion:
 engine:
   eval_before_training: False  
   print_freq: 10
-  nb_epochs: 10
+  nb_epochs: 1
   early_stop: 20
   valid_interval: 500
