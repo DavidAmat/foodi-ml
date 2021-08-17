@@ -209,6 +209,7 @@ class AdaptiveEmbeddingI2T(nn.Module):
         super().__init__()
 
         self.device = device
+        self.latent_size = latent_size
 
         if normalization:
             self.norm = Normalization(latent_size, normalization)
@@ -227,8 +228,10 @@ class AdaptiveEmbeddingI2T(nn.Module):
         '''
         # (B, 1024, T)
         #
-        cap_embed = cap_embed.permute(0, 2, 1)[...,:34]
-        img_embed = img_embed.permute(0, 2, 1)
+        BB, LT, KK = img_embed.shape
+        cap_embed = cap_embed.permute(0, 2, 1)
+        if LT != self.latent_size:
+            img_embed = img_embed.permute(0, 2, 1)
 
         cap_embed = self.norm(cap_embed)
 

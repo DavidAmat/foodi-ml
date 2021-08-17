@@ -10,7 +10,7 @@ dataset:
   adapt:
     data: []
 model:
-  latent_size: 1024
+  latent_size: 2048
   freeze_modules: [model.txt_enc.embed.glove,]
   txt_enc:
     name: gru_glove
@@ -21,18 +21,18 @@ model:
     pooling: none
     devices: [cuda,]
   img_enc:
-    name: resnet50 #simple
+    name: full_image #simple
     params:
       img_dim: 2048
     devices: [cuda,]
     pooling: none
   similarity:
     name: cosine
-    #params:
-    #  latent_size: 1024
-    #  gamma: 10
-    #  train_gamma: False
-    #  device: cuda
+    params:
+      latent_size: 2048
+      gamma: 10
+      train_gamma: False
+      device: cuda
     device: cuda
 optimizer:
   name: adamax

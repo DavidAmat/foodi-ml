@@ -17,11 +17,11 @@ model:
     params:
       glove_path: '.vocab_cache/glove_f30k_precomp.json.pkl'
   similarity:
-    name: cosine
+    name: adapt_i2t
     params:
-       #  latent_size: 1024
-       #  k: 1
-       #  gamma: 10
-       #  train_gamma: False
+       latent_size: 2048
+       k: 36
+       gamma: 10
+       train_gamma: False
        device: cuda
     device: cuda
