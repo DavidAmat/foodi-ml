@@ -7,6 +7,32 @@ from ..utils.logger import get_logger
 logger = get_logger()
 
 def save_checkpoint(
+    outpath, model, optimizer=None,
+    is_best=False, save_all=False, **kwargs
+):
+
+    if hasattr(model, 'module'):
+        model = model.module
+
+    state_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict()}
+    state_dict.update(**kwargs)
+
+    if not save_all:
+        epoch = -1
+
+    torch.save(
+        obj=state_dict,
+        f=os.path.join(outpath, f'checkpoint_eval_{epoch}.pkl'),
+    )
+
+    if is_best:
+        import shutil
+        shutil.copy(
+            os.path.join(outpath, f'checkpoint_eval_{epoch}.pkl'),
+            os.path.join(outpath, 'best_model_eval.pkl'),
+        )
+
+def save_checkpoint_foodi(
         outpath, model, optimizer=None,
         is_best=False, epoch=1):
 
@@ -18,14 +44,14 @@ def save_checkpoint(
 
     torch.save(
         obj=state_dict,
-        f=os.path.join(outpath, f'checkpoint_{epoch}.pkl'),
+        f=os.path.join(outpath, f'check_foodi_{epoch}.pkl'),
     )
 
     if is_best:
         import shutil
         shutil.copy(
-            os.path.join(outpath, f'checkpoint_{epoch}.pkl'),
-            os.path.join(outpath, 'best_model.pkl'),
+            os.path.join(outpath, f'check_foodi_{epoch}.pkl'),
+            os.path.join(outpath, 'best_model_foodi.pkl'),
         )
 
 def load_model(path):

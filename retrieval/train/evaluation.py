@@ -75,9 +75,10 @@ def evaluate(
     txt_emb = torch.FloatTensor(txt_emb).to(device)
 
     end_pred = dt()
-    sims = model.get_sim_matrix_shared(
-        embed_a=img_emb, embed_b=txt_emb,
-        lens=lengths, shared_size=shared_size
+    sims = model.get_sim_matrix(
+        embed_a=img_emb, 
+        embed_b=txt_emb,
+        lens=lengths
     )
     sims = layers.tensor_to_numpy(sims)
     end_sim = dt()
@@ -123,11 +124,11 @@ def i2t(sims):
         top1[index] = inds[0]
 
     # Compute metrics
-    r1 = 100.0 * len(np.where(ranks < 1)[0]) / len(ranks)
-    r5 = 100.0 * len(np.where(ranks < 5)[0]) / len(ranks)
-    r10 = 100.0 * len(np.where(ranks < 10)[0]) / len(ranks)
-    medr = np.floor(np.median(ranks)) + 1
-    meanr = ranks.mean() + 1
+    r1 = np.round(100.0 * len(np.where(ranks < 1)[0]) / len(ranks),2)
+    r5 = np.round(100.0 * len(np.where(ranks < 5)[0]) / len(ranks),2)
+    r10 = np.round(100.0 * len(np.where(ranks < 10)[0]) / len(ranks),2)
+    medr = np.round(np.floor(np.median(ranks)) + 1,2)
+    meanr = np.round(ranks.mean() + 1,2)
 
     return (r1, r5, r10, medr, meanr)
 
@@ -148,10 +149,10 @@ def t2i(sims):
             top1[captions_per_image * index + i] = inds[0]
 
     # Compute metrics
-    r1 = 100.0 * len(np.where(ranks < 1)[0]) / len(ranks)
-    r5 = 100.0 * len(np.where(ranks < 5)[0]) / len(ranks)
-    r10 = 100.0 * len(np.where(ranks < 10)[0]) / len(ranks)
-    medr = np.floor(np.median(ranks)) + 1
-    meanr = ranks.mean() + 1
+    r1 = np.round(100.0 * len(np.where(ranks < 1)[0]) / len(ranks),2)
+    r5 = np.round(100.0 * len(np.where(ranks < 5)[0]) / len(ranks),2)
+    r10 = np.round(100.0 * len(np.where(ranks < 10)[0]) / len(ranks),2)
+    medr = np.round(np.floor(np.median(ranks)) + 1,2)
+    meanr = np.round(ranks.mean() + 1,2)
 
     return (r1, r5, r10, medr, meanr)

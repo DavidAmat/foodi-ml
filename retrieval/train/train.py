@@ -44,7 +44,7 @@ class Trainer:
         self.path = path
         self.save_every_n_epoch = 1
         self.path_checkpoints = 'runs'
-        self.best_model_path = Path(self.path_checkpoints) / Path('best_model.pkl')
+        self.best_model_path = Path(self.path_checkpoints) / Path('best_model_foodi.pkl')
         os.makedirs(self.path_checkpoints, exist_ok=True)
 
     def setup_optim(self, optimizer={}, lr=1e-3, lr_scheduler=None, clip_grad=2.,
@@ -118,10 +118,10 @@ class Trainer:
                 path=self.path,
             )
 
-            # Save checkpoint
+            # Save checkpoint of foodiml
             if (epoch % self.save_every_n_epoch) == 0:
                 print(f"Saving epoch {epoch} ...")
-                self.save(path=self.path_checkpoints,
+                self.save_foodi(path=self.path_checkpoints,
                           is_best=False,
                           epoch=epoch)
 
@@ -130,7 +130,7 @@ class Trainer:
 
         # Save the final epoch
         print(f"Saving final epoch {epoch} ...")
-        self.save(path=self.path_checkpoints,
+        self.save_foodi(path=self.path_checkpoints,
                   is_best=True,
                   epoch=epoch)
 
@@ -257,7 +257,8 @@ class Trainer:
         metrics, val_metric = self.evaluate_loaders(valid_loaders)
         self._update_early_stop_vars(val_metric)
         if self.master:
-            self.save(path=self.path, is_best=(val_metric >= self.best_val), args=self.args, rsum=val_metric)
+            self.save(path=self.path, is_best=(val_metric >= self.best_val),
+                      args=self.args, rsum=val_metric)
             for metric, values in metrics.items():
                 self.tb_writer.add_scalar(metric, values, self.model.mm_criterion.iteration)
         self._check_early_stop()
@@ -301,13 +302,24 @@ class Trainer:
             final_sum += result[f'{loader_name}/rsum']
         return loader_metrics, final_sum/float(nb_loaders)
 
-    def save(self, path=None, is_best=False, epoch=0):
-        helper.save_checkpoint(
+    def save_foodi(self, path=None, is_best=False, epoch=0):
+        helper.save_checkpoint_foodi(
             path,
             self.model,
             optimizer=self.optimizer,
             is_best=is_best,
             epoch=epoch,
+        )
+
+    def save(self, path=None, is_best=False, args=None, **kwargs):
+        helper.save_checkpoint(
+            path, self.model,
+            optimizer=self.optimizer,
+            is_best=is_best,
+            save_all=self.save_all,
+            iteration=self.model.mm_criterion.iteration,
+            args=self.args,
+            **kwargs
         )
 
     def load(self, path=None):
