@@ -8,17 +8,13 @@ logger = get_logger()
 
 def save_checkpoint(
         outpath, model, optimizer=None,
-        is_best=False, save_all=False, **kwargs
-    ):
+        is_best=False, epoch=1):
 
     if hasattr(model, 'module'):
         model = model.module
 
     state_dict = {'model': model.state_dict(), 'optimizer': optimizer.state_dict()}
-    state_dict.update(**kwargs)
-
-    if not save_all:
-        epoch = -1
+    # state_dict.update(**kwargs)
 
     torch.save(
         obj=state_dict,

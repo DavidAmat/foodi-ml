@@ -42,6 +42,10 @@ class Trainer:
         self.world_size = world_size
         self.continue_training = True
         self.path = path
+        self.save_every_n_epoch = 1
+        self.path_checkpoints = 'runs'
+        self.best_model_path = Path(self.path_checkpoints) / Path('best_model.pkl')
+        os.makedirs(self.path_checkpoints, exist_ok=True)
 
     def setup_optim(self, optimizer={}, lr=1e-3, lr_scheduler=None, clip_grad=2.,
         log_histograms=False, log_grad_norm=False, early_stop=50, freeze_modules=[],
@@ -86,6 +90,7 @@ class Trainer:
         self.count = early_stop
         self.early_stop = early_stop
 
+
     def fit(self, train_loader, valid_loaders, lang_loaders=[],
         init_iteration=0, nb_epochs=2000,
         log_interval=50, valid_interval=500, world_size=1,
@@ -96,7 +101,6 @@ class Trainer:
         file_utils.save_yaml_opts(
             Path(self.path) / 'options.yaml', self.args
         )
-        self.best_model_path = Path(self.path) / Path('best_model.pkl')
 
         self.check_optimizer_setup()
         pbar = lambda x: range(x)
@@ -113,8 +117,22 @@ class Trainer:
                 valid_interval=valid_interval,
                 path=self.path,
             )
+
+            # Save checkpoint
+            if (epoch % self.save_every_n_epoch) == 0:
+                print(f"Saving epoch {epoch} ...")
+                self.save(path=self.path_checkpoints,
+                          is_best=False,
+                          epoch=epoch)
+
             if not self.continue_training:
                 break
+
+        # Save the final epoch
+        print(f"Saving final epoch {epoch} ...")
+        self.save(path=self.path_checkpoints,
+                  is_best=True,
+                  epoch=epoch)
 
     def check_optimizer_setup(self):
         if self.optimizer is None:
@@ -283,15 +301,13 @@ class Trainer:
             final_sum += result[f'{loader_name}/rsum']
         return loader_metrics, final_sum/float(nb_loaders)
 
-    def save(self, path=None, is_best=False, args=None, **kwargs):
+    def save(self, path=None, is_best=False, epoch=0):
         helper.save_checkpoint(
-            path, self.model,
+            path,
+            self.model,
             optimizer=self.optimizer,
             is_best=is_best,
-            save_all=self.save_all,
-            iteration=self.model.mm_criterion.iteration,
-            args=self.args,
-            **kwargs
+            epoch=epoch,
         )
 
     def load(self, path=None):

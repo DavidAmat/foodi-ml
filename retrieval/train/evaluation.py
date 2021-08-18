@@ -48,9 +48,10 @@ def predict_loader(model, data_loader, device):
         for j, nid in enumerate(ids):
             cap_lens[nid] = lengths[j]
 
-    if img_embs.shape[0] == cap_embs.shape[0]:
-        img_embs = remove_img_feat_redundancy(img_embs, data_loader)
-
+    # No redundancy in number of captions per image
+    #if img_embs.shape[0] == cap_embs.shape[0]:
+    #    img_embs = remove_img_feat_redundancy(img_embs, data_loader)
+    
     return img_embs, cap_embs, cap_lens
 
 def remove_img_feat_redundancy(img_embs, data_loader):
