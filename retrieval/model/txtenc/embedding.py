@@ -354,12 +354,12 @@ class GloveEmb(nn.Module):
         self.glove_dim = glove_dim
         self.final_word_emb = glove_dim
 
-        # word embedding
+        # word embedding #TODO: dev change
         self.glove = nn.Embedding(num_embeddings, glove_dim)
-        glove = nn.Parameter(torch.load(glove_path))
-        self.glove.weight = glove
-        self.glove.requires_grad = False
-
+        #glove = nn.Parameter(torch.load(glove_path))
+        #self.glove.weight = glove
+        self.glove.requires_grad = True  # default to False
+        
         if add_rand_embed:
             self.embed = nn.Embedding(num_embeddings, rand_dim)
             self.final_word_emb = glove_dim + rand_dim

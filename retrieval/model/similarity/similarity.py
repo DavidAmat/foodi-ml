@@ -237,7 +237,8 @@ class AdaptiveEmbeddingI2T(nn.Module):
 
         sims = torch.zeros(
             img_embed.shape[0], cap_embed.shape[0]
-        ).to(self.device)
+        )
+        sims = sims.to(self.device)
 
         # Global image representation
         img_embed = img_embed.mean(-1)

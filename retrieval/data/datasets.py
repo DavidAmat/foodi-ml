@@ -39,7 +39,7 @@ class ImageDataset(Dataset):
 
         self.data_wrapper = (
             FoodiML(
-                self.data_name,
+                self.data_path,
                 data_split=data_split,
             )
         )
@@ -57,7 +57,7 @@ class ImageDataset(Dataset):
 
     def _fetch_captions(self,):
         self.captions = []
-        for image_id in sorted(self.data_wrapper.image_ids):
+        for image_id in self.data_wrapper.image_ids:
             self.captions.extend(
                 self.data_wrapper.get_captions_by_image_id(image_id)
             )

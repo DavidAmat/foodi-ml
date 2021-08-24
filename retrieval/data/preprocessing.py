@@ -16,7 +16,7 @@ def get_transform(
         t_list = [
             # transforms.Resize(resize_to),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomResizedCrop(crop_size),
+            #transforms.RandomResizedCrop(crop_size),
         ]
     else:
         t_list = [

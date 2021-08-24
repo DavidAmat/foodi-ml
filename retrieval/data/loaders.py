@@ -12,23 +12,8 @@ from retrieval.utils.file_utils import load_yaml_opts, parse_loader_name
 logger = get_logger()
 
 __loaders__ = {
-    'dummy': {
-        'class': datasets.DummyDataset,
-    },
-    'precomp': {
-        'class': datasets.PrecompDataset,
-    },
-    'tensor': {
-        'class': datasets.PrecompDataset,
-    },
-    'lang': {
-        'class': datasets.CrossLanguageLoader,
-    },
     'image': {
         'class': datasets.ImageDataset,
-    },
-    'birds': {
-        'class': datasets.Birds,
     },
 }
 
