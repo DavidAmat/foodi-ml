@@ -19,7 +19,10 @@ jupyter/correct_predictions/
 jupyter/incorrect_predictions/
 jupyter/t2i_imgs/
 
-
+# Pytorch and numpy
+*.npy
+*.pt
+*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

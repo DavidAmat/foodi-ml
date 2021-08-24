@@ -5,7 +5,15 @@ import json
 import pickle
 from yaml import Dumper
 from addict import Dict
+import pandas as pd
 
+
+# FoodiML - Load parquet samples
+def load_samples(path, split):
+    return pd.read_parquet(
+        path=os.path.join(path, f'split={split}'),
+        engine="pyarrow"
+    )
 
 def read_txt(path):
     return open(path).read().strip().split('\n')
