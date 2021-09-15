@@ -9,7 +9,7 @@ from ..utils import layers
 @torch.no_grad()
 def predict_loader(model, data_loader, device):
     img_embs, cap_embs, cap_lens = None, None, None
-    max_n_word = 77
+    max_n_word = 200
     model.eval()
 
     pbar_fn = lambda x: x
