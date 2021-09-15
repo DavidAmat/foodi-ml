@@ -6,6 +6,8 @@ from ..utils.logger import get_logger
 from .imgenc import get_image_encoder, get_img_pooling
 from .similarity.factory import get_similarity_object
 from .similarity.similarity import Similarity
+from .similarity.similarity import Similarity_Ev
+
 from .txtenc import get_text_encoder, get_txt_pooling
 
 logger = get_logger()
@@ -55,9 +57,18 @@ class Retrieval(nn.Module):
             similarity.name,
             **similarity.params
         )
-
+        sim_obj_eval = get_similarity_object(
+            'adapt_i2t_eval',
+            **similarity.params
+        )
         self.similarity = Similarity(
             similarity_object=sim_obj,
+            device=similarity.device,
+            latent_size=latent_size,
+            **kwargs
+        )
+        self.similarity_eval = Similarity_Ev(
+            similarity_object=sim_obj_eval,
             device=similarity.device,
             latent_size=latent_size,
             **kwargs
@@ -105,7 +116,9 @@ class Retrieval(nn.Module):
         self.loss_device = torch.device(loss_device)
 
         self.similarity = self.similarity.to(self.loss_device)
-        self.ml_similarity = self.ml_similarity.to(self.loss_device)
+        self.similarity_eval = self.similarity.to(self.loss_device)
+        
+        #self.ml_similarity = self.ml_similarity.to(self.loss_device)
 
         logger.info((
             f'Setting devices: '
@@ -142,7 +155,8 @@ class Retrieval(nn.Module):
 
     def get_sim_matrix(self, embed_a, embed_b, lens=None):
         return self.similarity(embed_a, embed_b, lens)
-
+    def get_sim_matrix_eval(self, embed_a, embed_b, lens=None):
+        return self.similarity_eval(embed_a, embed_b, lens)
     def get_ml_sim_matrix(self, embed_a, embed_b, lens=None):
         return self.ml_similarity(embed_a, embed_b, lens)
 

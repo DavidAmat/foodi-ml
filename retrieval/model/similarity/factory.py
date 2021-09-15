@@ -13,6 +13,9 @@ _similarities = {
     'adapt_i2t': {
         'class': sim.AdaptiveEmbeddingI2T,
     },
+    'adapt_i2t_eval': {
+        'class': sim.AdaptiveEmbeddingI2T_eval,
+    },
     'scan_i2t': {
         'class': sim.StackedAttention,
     },

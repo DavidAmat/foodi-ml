@@ -143,6 +143,7 @@ class Trainer:
         img_emb, cap_emb = self.model.forward_batch(batch)
         lens = batch['caption'][1]
         sim_matrix = self.model.get_sim_matrix(img_emb, cap_emb, lens)
+        #sim_matrix = self.model.get_sim_matrix_eval(img_emb, cap_emb, lens)
         loss = self.model.mm_criterion(sim_matrix)
         return loss
 

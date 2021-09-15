@@ -75,7 +75,7 @@ def evaluate(
     txt_emb = torch.FloatTensor(txt_emb).to(device)
 
     end_pred = dt()
-    sims = model.get_sim_matrix(
+    sims = model.get_sim_matrix_eval(
         embed_a=img_emb, 
         embed_b=txt_emb,
         lens=lengths
