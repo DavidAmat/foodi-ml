@@ -2,10 +2,10 @@ dataset:
   text_repr: word
   loader_name: image
   train:
-    batch_size: 128
+    batch_size: 30
     workers: 1
   val:
-    batch_size: 128
+    batch_size: 30
     limit: 5000
   adapt:
     data: []
@@ -56,4 +56,4 @@ engine:
   print_freq: 10
   nb_epochs: 10
   early_stop: 20
-  valid_interval: 500
+  valid_interval: 5

@@ -5,11 +5,11 @@ dataset:
   vocab_paths: [.vocab_cache/foodiml_vocab.json,]
   train:
     data: foodiml.es #f30k_precomp.en
-    workers: 8
+    workers: 1
     batch_size: 30 # 128 batch size crashes the GPU memory
   val: 
     data: [foodiml.es] #f30k_precomp.en
-    workers: 8
+    workers: 1
     batch_size: 30
     limit: 5000  
 model:    
