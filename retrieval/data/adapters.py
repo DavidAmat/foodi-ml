@@ -15,7 +15,7 @@ class FoodiML:
         self.data_split = data_split
         self.data_path = Path(data_path)
         self.samples_path = (
-            self.data_path / 'samples_dev'  # TODO: change to 'samples'
+            self.data_path / 'samples'  # TODO: change to 'samples'
         )
         self.data = load_samples(self.samples_path, self.data_split)
         self.image_ids, self.img_dict, self.img_captions = self._get_img_ids()

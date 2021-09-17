@@ -70,10 +70,11 @@ def evaluate(
     _metrics_ = ('r1', 'r5', 'r10', 'medr', 'meanr')
 
     begin_pred = dt()
-
+    #commenting if it suffices to CPU this
     img_emb = torch.FloatTensor(img_emb).to(device)
     txt_emb = torch.FloatTensor(txt_emb).to(device)
-
+    #img_emb = torch.FloatTensor(img_emb)
+    #txt_emb = torch.FloatTensor(txt_emb)
     end_pred = dt()
     sims = model.get_sim_matrix_eval(
         embed_a=img_emb, 
@@ -103,6 +104,66 @@ def evaluate(
 
     return metrics
 
+@torch.no_grad()
+def evaluate_bigdata(
+    model, img_emb, txt_emb, lengths,
+    device, shared_size=128, return_sims=False
+):
+    model.eval()
+    _metrics_ = ('r1', 'r5', 'r10', 'medr', 'meanr')
+
+    # img_emb and txt_emb are way too large to fit in the GPU. 
+    # however note that the similarity matrix is just needed to calculate the K closest examples
+    # in i2t and t2i, one thing that we could do is break down the similarity matrix in N pieces and then do
+    # k closest of k closest
+    # 1: break down array into sub arrays
+    image_subarrays = np.split(img_emb,10)
+    text_subarrays = np.split(txt_emb,10)
+    # 2: for each array find the similarity matrix
+    for image_array,text_array in zip(image_subarrays,text_subarrays):
+        img_emb_s = torch.FloatTensor(image_array).to(device)
+        txt_emb_s = torch.FloatTensor(text_array).to(device)
+        small_sims = model.get_sim_matrix_eval(
+        embed_a=img_emb_s, 
+        embed_b=txt_emb_s,
+        lens=lengths
+    )
+        sims = layers.tensor_to_numpy(sims)
+        # 3: calculate the closest examples and save them into sub-matrices
+    # calculate th closest in the closest and get final metrics
+
+    
+    begin_pred = dt()
+
+
+    
+    end_pred = dt()
+    sims = model.get_sim_matrix_eval(
+        embed_a=img_emb, 
+        embed_b=txt_emb,
+        lens=lengths
+    )
+    end_sim = dt()
+
+    i2t_metrics = i2t(sims)
+    t2i_metrics = t2i(sims)
+    rsum = np.sum(i2t_metrics[:3]) + np.sum(t2i_metrics[:3])
+
+    i2t_metrics = {f'i2t_{k}': v for k, v in zip(_metrics_, i2t_metrics)}
+    t2i_metrics = {f't2i_{k}': v for k, v in zip(_metrics_, t2i_metrics)}
+
+    metrics = {
+        'pred_time': end_pred-begin_pred,
+        'sim_time': end_sim-end_pred,
+    }
+    metrics.update(i2t_metrics)
+    metrics.update(t2i_metrics)
+    metrics['rsum'] = rsum
+
+    if return_sims:
+        return metrics, sims
+
+    return metrics
 
 def i2t(sims):
     npts, ncaps = sims.shape
@@ -132,6 +193,35 @@ def i2t(sims):
 
     return (r1, r5, r10, medr, meanr)
 
+def i2t_10(sims):
+    # this function will return just the top 10 closest examples
+    npts, ncaps = sims.shape
+    captions_per_image = ncaps // npts
+
+    ranks = np.zeros(npts)
+    top1 = np.zeros(npts)
+    for index in range(npts):
+        # for each image index we are ordering all closest texts
+        inds = np.argsort(sims[index])[::-1]
+        # Score, check where the actual caption is
+        rank = 1e20
+        begin = captions_per_image * index
+        end = captions_per_image * index + captions_per_image
+        for i in range(begin, end, 1):
+            tmp = np.where(inds == i)[0][0]
+            if tmp < rank:
+                rank = tmp
+        ranks[index] = rank
+        top1[index] = inds[0]
+
+    # Compute metrics
+    r1 = np.round(100.0 * len(np.where(ranks < 1)[0]) / len(ranks),2)
+    r5 = np.round(100.0 * len(np.where(ranks < 5)[0]) / len(ranks),2)
+    r10 = np.round(100.0 * len(np.where(ranks < 10)[0]) / len(ranks),2)
+    medr = np.round(np.floor(np.median(ranks)) + 1,2)
+    meanr = np.round(ranks.mean() + 1,2)
+
+    return (r1, r5, r10, medr, meanr)
 
 def t2i(sims):
     npts, ncaps = sims.shape
