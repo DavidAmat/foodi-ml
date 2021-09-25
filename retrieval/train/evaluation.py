@@ -130,6 +130,8 @@ def evaluate_bigdata(
     )
         sims = layers.tensor_to_numpy(sims)
         # 3: calculate the closest examples and save them into sub-matrices
+        i2t_metrics = i2t_10(sims)
+        t2i_metrics = t2i(sims)
     # calculate th closest in the closest and get final metrics
 
     
