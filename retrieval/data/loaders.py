@@ -13,7 +13,7 @@ logger = get_logger()
 
 __loaders__ = {
     'image': {
-        'class': datasets.ImageDataset,
+        'class': datasets.ImageDataset
     },
 }
 

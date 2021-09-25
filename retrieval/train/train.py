@@ -182,15 +182,15 @@ class Trainer:
     ):
         lang_iters = self._get_lang_iters(lang_loaders)
 
-        pbar = lambda x: x
-        if self.master:
-            pbar = lambda x: tqdm(
-                x, total=len(x),
-                desc='Steps ',
-                leave=False,
-            )
+#         pbar = lambda x: x
+#         if self.master:
+#             pbar = lambda x: tqdm(
+#                 x, total=len(x),
+#                 desc='Steps ',
+#                 leave=False,
+#             )
 
-        for batch in pbar(train_loader):
+        for batch in train_loader:
             train_info = self._forward(batch, lang_iters, epoch)
             self._update_tb_log_info(train_info)
 
