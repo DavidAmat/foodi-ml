@@ -1,6 +1,6 @@
 dataset:
   text_repr: word
-  loader_name: image
+  loader_name: indisk_image
   train:
     batch_size: 30
     workers: 1
@@ -56,4 +56,4 @@ engine:
   print_freq: 10
   nb_epochs: 10
   early_stop: 20
-  valid_interval: 5
+  valid_interval: 31 # before 5

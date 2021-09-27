@@ -38,7 +38,7 @@ class FoodiML:
     def get_captions_by_image_id(self, img_id):
         return self.img_captions[img_id]
 
-    def get_s3_key_by_image_id(self, image_id):
+    def get_filename_by_image_id(self, image_id):
         return self.img_dict[image_id]
 
     def __call__(self, filename):

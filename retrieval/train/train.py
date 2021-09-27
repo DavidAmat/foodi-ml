@@ -280,12 +280,15 @@ class Trainer:
         loader_metrics = {}
         final_sum = 0.
         nb_loaders = len(loaders)
-
+        print("nb_loaders: ", nb_loaders)
         for i, loader in enumerate(loaders):
             loader_name = str(loader.dataset)
             self.sysoutlog(f'Evaluating {i+1:2d}/{nb_loaders:2d} - {loader_name}')
-            img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
-
+            print("evaluation.predict_loader begins")
+            img_emb, txt_emb, lens = evaluation.predict_loader_smart(self.model, loader, self.device)
+            print("img_emb.size() = ", img_emb.size())
+            print("txt_emb.size() = ", txt_emb.size())
+            print("Beginning evaluation.evaluate")
             result = evaluation.evaluate(
                 model=self.model, img_emb=img_emb,
                 txt_emb=txt_emb, lengths=lens,

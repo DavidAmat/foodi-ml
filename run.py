@@ -53,8 +53,8 @@ def set_model_criterion(opt, model, multilanguage_criterion, multimodal_criterio
 
 
 if __name__ == '__main__':
-    args = params.get_train_params()
-    opt = load_yaml_opts(args.options)
+    args = params.get_train_params() # Loads path to yaml
+    opt = load_yaml_opts(args.options) 
     logger = create_logger(level='debug' if opt.engine.debug else 'info')
 
     logger.info(f'Used args   : \n{args}')
@@ -63,10 +63,20 @@ if __name__ == '__main__':
     data_path = get_data_path(opt)
 
     train_loader, val_loaders, adapt_loaders = get_loaders(data_path, args.local_rank, opt)
-
+    
+    # DEBUG PROBLEM OF DATA LOADER ##########
+    #print("Trying to run the dataloader prints")
+    #for batch in train_loader:
+    #    print(batch)
+    #print("Iterated over the train_data_loader")
+    ##############################
+    
+    
     tokenizers = get_tokenizers(train_loader)
     model = Retrieval(**opt.model, tokenizers=tokenizers)
 
+    
+    
     # TODO: Implement complete resume of training
     if opt.exp.resume:
         model = helper.load_model(opt.exp.resume)
@@ -107,3 +117,4 @@ if __name__ == '__main__':
         valid_interval=opt.engine.valid_interval,
         log_interval=opt.engine.print_freq
     )
+    

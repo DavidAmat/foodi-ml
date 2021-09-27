@@ -15,6 +15,9 @@ __loaders__ = {
     'image': {
         'class': datasets.ImageDataset
     },
+    'indisk_image': {
+        'class': datasets.InDiskImageDataset
+    },
 }
 
 def get_dataset_class(loader_name):
