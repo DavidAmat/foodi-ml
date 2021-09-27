@@ -11,6 +11,7 @@ from retrieval.data.loaders import get_loaders
 from retrieval.utils.logger import create_logger
 from retrieval.utils.helper import load_model
 from retrieval.utils.file_utils import load_yaml_opts, parse_loader_name
+from PIL import PngImagePlugin
 
 
 def get_data_path(opt):
@@ -53,6 +54,9 @@ def set_model_criterion(opt, model, multilanguage_criterion, multimodal_criterio
 
 
 if __name__ == '__main__':
+    LARGE_ENOUGH_NUMBER = 100
+    PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
+    
     args = params.get_train_params() # Loads path to yaml
     opt = load_yaml_opts(args.options) 
     logger = create_logger(level='debug' if opt.engine.debug else 'info')

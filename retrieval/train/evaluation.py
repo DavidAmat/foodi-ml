@@ -19,7 +19,7 @@ def predict_loader(model, data_loader, device):
             desc='Pred  ',
             leave=False,
         )
-    print("Evaluation begins")
+    #print("Evaluation begins")
     for batch in pbar_fn(data_loader):
         ids = batch['index']
         if len(batch['caption'][0]) == 2:
@@ -27,12 +27,12 @@ def predict_loader(model, data_loader, device):
         else:
             cap, lengths = batch['caption']
         img_emb, cap_emb = model.forward_batch(batch)
-        print(f"after doing forward in one batch in evaluation: img_emb.size(): {img_emb.size()}")
-        print(f"after doing forward in one batch in evaluation: cap_emb.size(): {cap_emb.size()}")
+        #print(f"after doing forward in one batch in evaluation: img_emb.size(): {img_emb.size()}")
+        #print(f"after doing forward in one batch in evaluation: cap_emb.size(): {cap_emb.size()}")
         if img_embs is None:
             if len(img_emb.shape) == 3:
                 is_tensor = True
-                print(f"Trying to allocate a tensor in CPU of ({len(data_loader.dataset)}, {img_emb.size(1)}, {img_emb.size(2)})")
+                #print(f"Trying to allocate a tensor in CPU of ({len(data_loader.dataset)}, {img_emb.size(1)}, {img_emb.size(2)})")
                 img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1), img_emb.size(2)))
                 cap_embs = np.zeros((len(data_loader.dataset), max_n_word, cap_emb.size(2)))
             else:
@@ -130,7 +130,7 @@ def predict_loader_smart(model, data_loader, device):
             desc='Pred  ',
             leave=False,
         )
-    print("Evaluation begins")
+    #print("Evaluation begins")
     for batch in pbar_fn(data_loader):
         ids = batch['index']
         if len(batch['caption'][0]) == 2:
@@ -138,18 +138,17 @@ def predict_loader_smart(model, data_loader, device):
         else:
             cap, lengths = batch['caption']
         img_emb, cap_emb = model.forward_batch(batch)
-        print(f"after doing forward in one batch in evaluation: img_emb.size(): {img_emb.size()}")
-        print(f"after doing forward in one batch in evaluation: cap_emb.size(): {cap_emb.size()}")
+        #print(f"after doing forward in one batch in evaluation: img_emb.size(): {img_emb.size()}")
+        #print(f"after doing forward in one batch in evaluation: cap_emb.size(): {cap_emb.size()}")
         if img_embs is None:
             if len(img_emb.shape) == 3:
                 is_tensor = True
-                print(f"Trying to allocate a tensor in CPU of ({len(data_loader.dataset)}, {img_emb.size(1)}, {img_emb.size(2)})")
                 img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
-                print(f"New size of the img_embs = {img_embs.shape}")
-                print(f"Declaring giant matrix for captions...")
+                #print(f"New size of the img_embs = {img_embs.shape}")
+                #print(f"Declaring giant matrix for captions...")
                 # cap_embs = np.zeros((len(data_loader.dataset), max_n_word, cap_emb.size(2)))
                 cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(2)))
-                print("Declared")
+                #print("Declared")
             else:
                 is_tensor = False
                 img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
@@ -163,14 +162,17 @@ def predict_loader_smart(model, data_loader, device):
             img_vector = img_vector.float()
             img_vector = img_vector.to(device)
             cap_emb = cap_emb.to(device)
-            print("dimension of image vector: ", img_vector.size())
-            print("dimension of cap_emb: ", cap_emb.size())
+            cap_emb = cap_emb.permute(0, 2, 1)[...,:34] # To replicate behaviour of line #230 of similarity.py
+            #print("dimension of image vector: ", img_vector.size())
+            #print("dimension of cap_emb: ", cap_emb.size())
             
             txt_output = model.similarity.similarity.adapt_txt(value=cap_emb, query=img_vector)
             txt_output = model.similarity.similarity.fovea(txt_output)
             txt_vector = txt_output.max(dim=-1)[0]
-            print("Text vector size: ", txt_vector.size())
-            cap_embs[i, :] = txt_vector
+            #print("Text vector size: ", txt_vector.size())
+            cap_embs[i, :] = txt_vector.cpu().numpy()
+            #print("Added txt_vector to cap_embs")
+        
         """
         if is_tensor:
             cap_embs[ids,:max(lengths),:] = cap_emb.data.cpu().numpy()
@@ -179,7 +181,7 @@ def predict_loader_smart(model, data_loader, device):
         """
         for j, nid in enumerate(ids):
             cap_lens[nid] = lengths[j]
-
+        #print("Finished one batch")
     # No redundancy in number of captions per image
     #if img_embs.shape[0] == cap_embs.shape[0]:
     #    img_embs = remove_img_feat_redundancy(img_embs, data_loader)
