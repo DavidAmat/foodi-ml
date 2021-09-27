@@ -35,7 +35,7 @@ def load_and_filter_file(file_path):
     )
 
 
-def load_and_filter_file(file_path):
+def load_and_filter_files(file_path):
 
     result = load_json(file)
     result_filtered = defaultdict(dict)
@@ -62,3 +62,4 @@ def load_and_filter_file(file_path):
 
 for file in files:
     load_and_filter_file(file)
+    load_and_filter_files(file)
