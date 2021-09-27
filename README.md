@@ -10,6 +10,7 @@ This code implements a novel approach for training image-text alignment models, 
 ADAPT is designed to adjust an intermediate representation of instances from a modality _a_ using an embedding vector of an instance from modality _b_. Such an adaptation is designed to filter and enhance important information across internal features, allowing for guided vector representations – which resembles the working of attention modules, though far more computationally efficient. For further information, please read our [AAAI 2020 paper](https://www.researchgate.net/publication/337636199_Adaptive_Cross-modal_Embeddings_for_Image-Text_Alignment).
 
 
+
 ## Table of Contents
 
 * [Installation](#installation)
