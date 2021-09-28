@@ -70,6 +70,7 @@ if __name__ == '__main__':
     
     # DEBUG PROBLEM OF DATA LOADER ##########
     #print("Trying to run the dataloader prints")
+    #print(len(train_loader.dataset))
     #for batch in train_loader:
     #    print(batch)
     #print("Iterated over the train_data_loader")

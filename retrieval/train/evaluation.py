@@ -19,7 +19,7 @@ def predict_loader(model, data_loader, device):
             desc='Pred  ',
             leave=False,
         )
-    #print("Evaluation begins")
+    print("Evaluation begins")
     for batch in pbar_fn(data_loader):
         ids = batch['index']
         if len(batch['caption'][0]) == 2:
@@ -138,17 +138,11 @@ def predict_loader_smart(model, data_loader, device):
         else:
             cap, lengths = batch['caption']
         img_emb, cap_emb = model.forward_batch(batch)
-        #print(f"after doing forward in one batch in evaluation: img_emb.size(): {img_emb.size()}")
-        #print(f"after doing forward in one batch in evaluation: cap_emb.size(): {cap_emb.size()}")
         if img_embs is None:
             if len(img_emb.shape) == 3:
                 is_tensor = True
                 img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
-                #print(f"New size of the img_embs = {img_embs.shape}")
-                #print(f"Declaring giant matrix for captions...")
-                # cap_embs = np.zeros((len(data_loader.dataset), max_n_word, cap_emb.size(2)))
                 cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(2)))
-                #print("Declared")
             else:
                 is_tensor = False
                 img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
@@ -157,14 +151,14 @@ def predict_loader_smart(model, data_loader, device):
 
         # cache embeddings
         img_embs[ids] = img_emb.mean(-1).data.cpu().numpy()
+        cap_emb = cap_emb.to(device)
+        cap_emb = cap_emb.permute(0, 2, 1)[...,:34] # To replicate behaviour of line #230 of similarity.py
+        cap_emb = model.similarity.similarity.norm(cap_emb)
         for i in ids:
+            #print("i: ", i)
             img_vector = torch.from_numpy(img_embs[i]).unsqueeze(0)
             img_vector = img_vector.float()
             img_vector = img_vector.to(device)
-            cap_emb = cap_emb.to(device)
-            cap_emb = cap_emb.permute(0, 2, 1)[...,:34] # To replicate behaviour of line #230 of similarity.py
-            #print("dimension of image vector: ", img_vector.size())
-            #print("dimension of cap_emb: ", cap_emb.size())
             
             txt_output = model.similarity.similarity.adapt_txt(value=cap_emb, query=img_vector)
             txt_output = model.similarity.similarity.fovea(txt_output)
@@ -214,11 +208,17 @@ def evaluate(
     #img_emb = torch.FloatTensor(img_emb)
     #txt_emb = torch.FloatTensor(txt_emb)
     end_pred = dt()
-    sims = model.get_sim_matrix_eval(
+    sims = model.get_sim_matrix_shared(
         embed_a=img_emb, 
         embed_b=txt_emb,
         lens=lengths
     )
+    
+    #sims = model.get_sim_matrix_shared(
+    #    embed_a=img_emb, 
+    #    embed_b=txt_emb,
+    #    lens=lengths
+    #)
     sims = layers.tensor_to_numpy(sims)
     end_sim = dt()
 

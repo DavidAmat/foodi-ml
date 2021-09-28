@@ -193,6 +193,8 @@ class InDiskImageDataset(Dataset):
         # handle the image redundancy
         #print("getitem begins")
         seq_id = self.ids[index]
+        #print("length of self.data_wrapper.image_ids: ", len(self.data_wrapper.image_ids))
+        #print("seq_id: ", seq_id)
         image_id = self.data_wrapper.image_ids[seq_id]
         
         image = self.load_img(image_id)

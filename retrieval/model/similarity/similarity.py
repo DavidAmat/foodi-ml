@@ -57,10 +57,13 @@ class Similarity(nn.Module):
 
         #img_embed = img_embed.to(self.device)
         #cap_embed = cap_embed.to(self.device)
-
+        #print("----------forward_shared-----------")
+        #print("img_embed.size(): ", img_embed.size())
+        #print("cap_embed.size(): ", cap_embed.size())
         n_im_shard = (len(img_embed)-1)//shared_size + 1
         n_cap_shard = (len(cap_embed)-1)//shared_size + 1
-
+        #print("n_im_shard: ", n_im_shard)
+        #print("n_cap_shard: ", n_cap_shard)
         logger.debug('Calculating shared similarities')
 
         pbar_fn = lambda x: range(x)
@@ -72,17 +75,28 @@ class Similarity(nn.Module):
             )
 
         d = torch.zeros(len(img_embed), len(cap_embed)).cpu()
+        #print("dimension of d: ", d.size())
         for i in pbar_fn(n_im_shard):
+            #print("i: " , i)
             im_start = shared_size*i
+            #print("im_start: ", im_start)
             im_end = min(shared_size*(i+1), len(img_embed))
+            #print("im_end: ", im_end)
             for j in range(n_cap_shard):
                 cap_start = shared_size*j
+                #print("cap_start: ", cap_start)
                 cap_end = min(shared_size*(j+1), len(cap_embed))
+                #print("cap_end: ", cap_end)
                 im = img_embed[im_start:im_end]
+                #print("im.size(): ", im.size())
                 s = cap_embed[cap_start:cap_end]
+                #print("s.size(): ", s.size())
+                
                 l = lens[cap_start:cap_end]
                 sim = self.forward(im, s, l)
+                #print("sim.size(): ", sim.size())
                 d[im_start:im_end, cap_start:cap_end] = sim
+            #print(d)
 
         logger.debug('Done computing shared similarities.')
         return d
@@ -97,7 +111,8 @@ class Similarity(nn.Module):
 
         n_im_shard = (len(img_embed)-1)//shared_size + 1
         n_cap_shard = (len(cap_embed)-1)//shared_size + 1
-
+        #print("n_im_shard: ", n_im_shard)
+        #print("n_cap_shard: ", n_cap_shard)
         logger.debug('Calculating shared similarities')
 
         pbar_fn = lambda x: range(x)
@@ -107,20 +122,60 @@ class Similarity(nn.Module):
                 desc='Test  ',
                 leave=False,
             )
-
+        cap_embed = l2norm(cap_embed, dim=-1)
+        #print("cap_embed.size(): ", cap_embed.size())
+        #print("img_embed.size(): ", img_embed.size())
         d = torch.zeros(len(img_embed), len(cap_embed)).cpu()
+        for i, img_tensor in enumerate(img_embed):
+            img_vector = img_tensor.unsqueeze(0)
+            
+            img_vector = l2norm(img_vector, dim=-1)
+            #print("img_vector.size(): ", img_vector.size())
+            #print("txt_vector.size(): ", txt_vector.size())
+            sim = cosine_sim(img_vector, cap_embed)
+            sim = sim.squeeze(-1)
+            d[i,:] = sim
+            
+    
+        """
+        for i, img_tensor in enumerate(img_embed):
+            
+            img_vector = img_tensor.unsqueeze(0) # 1, 2048
+            txt_vector = cap_embed[i].unsqueeze(0)
+            #print("img_vector.size(): ", img_vector.size())
+            #print("txt_vector.size(): ", txt_vector.size())
+            txt_vector = l2norm(txt_vector, dim=-1)
+            img_vector = l2norm(img_vector, dim=-1)
+            #print("img_vector.size(): ", img_vector.size())
+            #print("txt_vector.size(): ", txt_vector.size())
+            
+            sim = cosine_sim(img_vector, txt_vector)
+            sim = sim.squeeze(-1)
+            #print(sim)
+            sims[i,:] = sim
+
+        
+    
+        
         for i in pbar_fn(n_im_shard):
             im_start = shared_size*i
+            print("im_start: ", im_start)
             im_end = min(shared_size*(i+1), len(img_embed))
+            print("im_end: ", im_end)
             for j in range(n_cap_shard):
                 cap_start = shared_size*j
+                print("cap_start: ", cap_start)
                 cap_end = min(shared_size*(j+1), len(cap_embed))
+                print("cap_end: ", cap_end)
                 im = img_embed[im_start:im_end]
+                print("im.size(): ", im.size())
                 s = cap_embed[cap_start:cap_end]
+                print("s.size(): ", s.size())
                 l = lens[cap_start:cap_end]
                 sim = self.forward_eval(im, s, l)
                 d[im_start:im_end, cap_start:cap_end] = sim
-
+        """
+        
         logger.debug('Done computing shared similarities.')
         return d
 
@@ -341,16 +396,20 @@ class AdaptiveEmbeddingI2T(nn.Module):
 
             img_vector = img_tensor.unsqueeze(0)
             txt_output = self.adapt_txt(value=cap_embed, query=img_vector)
+            #print("txt_output.size(): ", txt_output.size())
             txt_output = self.fovea(txt_output)
+            #print("txt_output.size() after fovea: ", txt_output.size())
 
             txt_vector = txt_output.max(dim=-1)[0]
+            #print("txt_vector.size(): ", txt_vector.size())
 
             txt_vector = l2norm(txt_vector, dim=-1)
             img_vector = l2norm(img_vector, dim=-1)
             sim = cosine_sim(img_vector, txt_vector)
             sim = sim.squeeze(-1)
+            
             sims[i,:] = sim
-
+        #print("sims.size(): ", sims.size())
         return sims
     
     def forward_eval(self, img_embed, cap_embed, lens, **kwargs):
@@ -365,8 +424,6 @@ class AdaptiveEmbeddingI2T(nn.Module):
         #if LT != self.latent_size:
         #    img_embed = img_embed.permute(0, 2, 1)
 
-        cap_embed = self.norm(cap_embed)
-
         sims = torch.zeros(
             img_embed.shape[0], cap_embed.shape[0]
         )
@@ -374,14 +431,23 @@ class AdaptiveEmbeddingI2T(nn.Module):
 
         # Global image representation
         #img_embed = img_embed.mean(-1)
-
+        #print("forward eval ----------------")
+        print("img_embed.size(): ", img_embed.size())
+        print("cap_emb.size(): ", cap_embed.size())
         for i, img_tensor in enumerate(img_embed):
-            img_vector = img_tensor[i,:]# Maybe batch is missing here and we need squeeze or unsqueeze, we could even try to do it with batch >1 but now let's make it work 
-            txt_vector = cap_embed[i,:] # Maybe batch is missing here and we need squeeze or unsqueeze, we could even try to do it with batch >1 but now let's make it work
+            
+            img_vector = img_tensor.unsqueeze(0) # 1, 2048
+            txt_vector = cap_embed[i].unsqueeze(0)
+            #print("img_vector.size(): ", img_vector.size())
+            #print("txt_vector.size(): ", txt_vector.size())
             txt_vector = l2norm(txt_vector, dim=-1)
             img_vector = l2norm(img_vector, dim=-1)
+            #print("img_vector.size(): ", img_vector.size())
+            #print("txt_vector.size(): ", txt_vector.size())
+            
             sim = cosine_sim(img_vector, txt_vector)
             sim = sim.squeeze(-1)
+            #print(sim)
             sims[i,:] = sim
 
         return sims
