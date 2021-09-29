@@ -286,8 +286,8 @@ class Trainer:
             self.sysoutlog(f'Evaluating {i+1:2d}/{nb_loaders:2d} - {loader_name}')
             print("evaluation.predict_loader begins")
             img_emb, txt_emb, lens = evaluation.predict_loader_smart(self.model, loader, self.device)
-            print("img_emb.size() = ", img_emb.size())
-            print("txt_emb.size() = ", txt_emb.size())
+            #print("img_emb.size() = ", img_emb.size())
+            #print("txt_emb.size() = ", txt_emb.size())
             print("Beginning evaluation.evaluate")
             result = evaluation.evaluate(
                 model=self.model, img_emb=img_emb,

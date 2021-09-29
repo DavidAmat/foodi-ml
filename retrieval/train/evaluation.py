@@ -115,14 +115,13 @@ def new_predict_loader(model, data_loader, device):
     print("caps_embds[0]: ", caps_embs[0].size())
     return img_embs, cap_embs, cap_lens # This will be a list in our case
 
-
-
 @torch.no_grad()
 def predict_loader_smart(model, data_loader, device):
     img_embs, cap_embs, cap_lens = None, None, None
     max_n_word = 200
     model.eval()
 
+    
     pbar_fn = lambda x: x
     if model.master:
         pbar_fn = lambda x: tqdm(
@@ -131,25 +130,35 @@ def predict_loader_smart(model, data_loader, device):
             leave=False,
         )
     #print("Evaluation begins")
+    
+    #img_emb, cap_emb = model.forward_batch(batch)
+    #img_emb = img_emb.type(torch.float16)
+    #cap_emb = cap_emb.type(torch.float16)
     for batch in pbar_fn(data_loader):
         ids = batch['index']
         if len(batch['caption'][0]) == 2:
             (_, _), (_, lengths) = batch['caption']
         else:
             cap, lengths = batch['caption']
+        #img_emb, cap_emb = model.forward_batch(batch)
+        #img_emb = img_emb.type(torch.float16)
+        #cap_emb = cap_emb.type(torch.float16)
         img_emb, cap_emb = model.forward_batch(batch)
+        #img_emb = img_emb.type(torch.float16)
+        #cap_emb = cap_emb.type(torch.float16)
         if img_embs is None:
             if len(img_emb.shape) == 3:
                 is_tensor = True
-                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
-                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(2)))
+                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
+                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(2)), dtype=np.float16)
             else:
                 is_tensor = False
-                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
-                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(1)))
+                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
+                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(1)), dtype=np.float16)
             cap_lens = [0] * len(data_loader.dataset)
 
         # cache embeddings
+        
         img_embs[ids] = img_emb.mean(-1).data.cpu().numpy()
         cap_emb = cap_emb.to(device)
         cap_emb = cap_emb.permute(0, 2, 1)[...,:34] # To replicate behaviour of line #230 of similarity.py
@@ -167,12 +176,62 @@ def predict_loader_smart(model, data_loader, device):
             cap_embs[i, :] = txt_vector.cpu().numpy()
             #print("Added txt_vector to cap_embs")
         
-        """
+    '''
         if is_tensor:
             cap_embs[ids,:max(lengths),:] = cap_emb.data.cpu().numpy()
         else:
             cap_embs[ids,] = cap_emb.data.cpu().numpy()
-        """
+    '''
+
+    for j, nid in enumerate(ids):
+        cap_lens[nid] = lengths[j]
+    #print("Finished one batch")
+    # No redundancy in number of captions per image
+    #if img_embs.shape[0] == cap_embs.shape[0]:
+    #    img_embs = remove_img_feat_redundancy(img_embs, data_loader)
+    
+    return img_embs, cap_embs, cap_lens
+
+@torch.no_grad()
+def predict_loader_smart_debug(model, data_loader, device):
+    img_embs, cap_embs, cap_lens = None, None, None
+    max_n_word = 200
+    model.eval()
+
+    
+    pbar_fn = lambda x: x
+    if model.master:
+        pbar_fn = lambda x: tqdm(
+            x, total=len(x),
+            desc='Pred  ',
+            leave=False,
+        )
+    #print("Evaluation begins")
+    k=True
+    
+    batch = next(iter(data_loader))
+    ids = batch['index']
+    if len(batch['caption'][0]) == 2:
+        (_, _), (_, lengths) = batch['caption']
+    else:
+        cap, lengths = batch['caption']
+    #img_emb, cap_emb = model.forward_batch(batch)
+    #img_emb = img_emb.type(torch.float16)
+    #cap_emb = cap_emb.type(torch.float16)
+    img_emb, cap_emb = model.forward_batch(batch)
+    img_emb = img_emb.type(torch.float16)
+    cap_emb = cap_emb.type(torch.float16)
+    if img_embs is None:
+        if len(img_emb.shape) == 3:
+            is_tensor = True
+            img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
+            cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(2)), dtype=np.float16)
+        else:
+            is_tensor = False
+            img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
+            cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(1)), dtype=np.float16)
+        cap_lens = [0] * len(data_loader.dataset)
+
         for j, nid in enumerate(ids):
             cap_lens[nid] = lengths[j]
         #print("Finished one batch")
@@ -181,6 +240,7 @@ def predict_loader_smart(model, data_loader, device):
     #    img_embs = remove_img_feat_redundancy(img_embs, data_loader)
     
     return img_embs, cap_embs, cap_lens
+
 
 
 def remove_img_feat_redundancy(img_embs, data_loader):
@@ -208,17 +268,17 @@ def evaluate(
     #img_emb = torch.FloatTensor(img_emb)
     #txt_emb = torch.FloatTensor(txt_emb)
     end_pred = dt()
-    sims = model.get_sim_matrix_shared(
-        embed_a=img_emb, 
-        embed_b=txt_emb,
-        lens=lengths
-    )
-    
     #sims = model.get_sim_matrix_shared(
     #    embed_a=img_emb, 
     #    embed_b=txt_emb,
     #    lens=lengths
     #)
+    print("Beginning get_sim_matrix_shared_eval")
+    sims = model.get_sim_matrix_eval(
+        embed_a=img_emb, 
+        embed_b=txt_emb,
+        lens=lengths
+    )
     sims = layers.tensor_to_numpy(sims)
     end_sim = dt()
 

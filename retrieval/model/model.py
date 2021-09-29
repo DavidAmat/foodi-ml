@@ -155,7 +155,7 @@ class Retrieval(nn.Module):
 
     def get_sim_matrix(self, embed_a, embed_b, lens=None):
         return self.similarity(embed_a, embed_b, lens)
-    def get_sim_matrix_eval(self, embed_a, embed_b, lens=None):
+    def get_sim_matrix_eval(self, embed_a, embed_b, lens=None, shared_size=128):
         return self.similarity.forward_shared_eval(
             embed_a, embed_b, lens,
             shared_size=shared_size

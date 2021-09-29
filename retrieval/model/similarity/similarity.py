@@ -15,7 +15,7 @@ from ..layers import attention, adapt
 from ..txtenc.pooling import mean_pooling
 from ..txtenc import pooling
 from ..txtenc import factory
-from .measure import cosine_sim, l2norm
+from .measure import cosine_sim, l2norm, l2norm_numpy, cosine_sim_numpy
 
 logger = get_logger()
 
@@ -109,32 +109,31 @@ class Similarity(nn.Module):
         #img_embed = img_embed.to(self.device)
         #cap_embed = cap_embed.to(self.device)
 
-        n_im_shard = (len(img_embed)-1)//shared_size + 1
-        n_cap_shard = (len(cap_embed)-1)//shared_size + 1
         #print("n_im_shard: ", n_im_shard)
         #print("n_cap_shard: ", n_cap_shard)
         logger.debug('Calculating shared similarities')
-
-        pbar_fn = lambda x: range(x)
-        if self.master:
-            pbar_fn = lambda x: tqdm(
-                range(x), total=x,
-                desc='Test  ',
-                leave=False,
-            )
-        cap_embed = l2norm(cap_embed, dim=-1)
+        img_embed=img_embed.cpu().numpy()
+        cap_embed=cap_embed.cpu().numpy()
+        cap_embed = l2norm_numpy(cap_embed, dim=-1)
         #print("cap_embed.size(): ", cap_embed.size())
         #print("img_embed.size(): ", img_embed.size())
-        d = torch.zeros(len(img_embed), len(cap_embed)).cpu()
+        d = np.zeros((len(img_embed), len(cap_embed)), dtype=np.float16)
+        print('GASRRAY IN MEMORY')
+        l=len(img_embed)
         for i, img_tensor in enumerate(img_embed):
-            img_vector = img_tensor.unsqueeze(0)
-            
-            img_vector = l2norm(img_vector, dim=-1)
+            #img_vector = img_tensor.unsqueeze(0)
+            img_vector = np.expand_dims(img_tensor,0)
+            img_vector = l2norm_numpy(img_vector, dim=-1)
+            txt_vector = np.expand_dims(cap_embed[i],0)
+            #img_vector = l2norm(img_vector, dim=-1)
             #print("img_vector.size(): ", img_vector.size())
             #print("txt_vector.size(): ", txt_vector.size())
-            sim = cosine_sim(img_vector, cap_embed)
+            #sim = cosine_sim(img_vector, cap_embed)
+            sim = cosine_sim_numpy(img_vector, txt_vector)
             sim = sim.squeeze(-1)
             d[i,:] = sim
+        print('foor loop done')
+        
             
     
         """
