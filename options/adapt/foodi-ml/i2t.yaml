@@ -6,7 +6,7 @@ dataset:
   train:
     data: foodiml.es #f30k_precomp.en
     workers: 1
-    batch_size: 30 # 128 batch size crashes the GPU memory
+    batch_size: 25 # 128 batch size crashes the GPU memory
   val: 
     data: [foodiml.es] #f30k_precomp.en
     workers: 1

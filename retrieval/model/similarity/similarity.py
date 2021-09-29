@@ -374,18 +374,23 @@ class AdaptiveEmbeddingI2T(nn.Module):
         '''
         # (B, 1024, T)
         #
+        #print("max len: ", max(lens))
+        #print("cap_embed: ", cap_embed.size())
+        cap_batch_size, cap_num_words, cap_emb_dim = cap_embed.size()
+        cap_embed = cap_embed[:, :min(200, cap_num_words), :]
+        
         BB, LT, KK = img_embed.shape
         cap_embed = cap_embed.permute(0, 2, 1)
         if LT != self.latent_size:
             img_embed = img_embed.permute(0, 2, 1)
-
+        
         cap_embed = self.norm(cap_embed)
-
+    
         sims = torch.zeros(
             img_embed.shape[0], cap_embed.shape[0]
         )
         sims = sims.to(self.device)
-
+    
         # Global image representation
         img_embed = img_embed.mean(-1)
 

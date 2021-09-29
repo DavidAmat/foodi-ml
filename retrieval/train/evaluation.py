@@ -134,6 +134,9 @@ def predict_loader_smart(model, data_loader, device):
     #img_emb, cap_emb = model.forward_batch(batch)
     #img_emb = img_emb.type(torch.float16)
     #cap_emb = cap_emb.type(torch.float16)
+    # random samples used for evaluation
+    max_samples_eval=10000
+    count=0
     for batch in pbar_fn(data_loader):
         ids = batch['index']
         if len(batch['caption'][0]) == 2:
@@ -149,13 +152,13 @@ def predict_loader_smart(model, data_loader, device):
         if img_embs is None:
             if len(img_emb.shape) == 3:
                 is_tensor = True
-                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
-                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(2)), dtype=np.float16)
+                img_embs = np.zeros((max_samples_eval, img_emb.size(1)), dtype=np.float16)
+                cap_embs = np.zeros((max_samples_eval, cap_emb.size(2)), dtype=np.float16)
             else:
                 is_tensor = False
-                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
-                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(1)), dtype=np.float16)
-            cap_lens = [0] * len(data_loader.dataset)
+                img_embs = np.zeros((max_samples_eval, img_emb.size(1)), dtype=np.float16)
+                cap_embs = np.zeros((max_samples_eval, cap_emb.size(1)), dtype=np.float16)
+            cap_lens = [0] * max_samples_eval
 
         # cache embeddings
         
@@ -174,7 +177,9 @@ def predict_loader_smart(model, data_loader, device):
             txt_vector = txt_output.max(dim=-1)[0]
             #print("Text vector size: ", txt_vector.size())
             cap_embs[i, :] = txt_vector.cpu().numpy()
-            #print("Added txt_vector to cap_embs")
+        count=count+len(ids)
+        if count==max_samples_eval-1:
+            break
         
     '''
         if is_tensor:

@@ -52,8 +52,8 @@ criterion:
   max_violation: False
   beta: 0.991
 engine:
-  eval_before_training: True
-  print_freq: 6000
+  eval_before_training: False
+  print_freq: 100 #6000
   nb_epochs: 50
   early_stop: 20
-  valid_interval: 65000 # before 5, after each epoch
+  valid_interval: 10000 # before 5, after each epoch now with train 157155 and 25 batch size one epoch lasts 7007 iterations, setting >7007 so we save the model regardless of the evaluation result
