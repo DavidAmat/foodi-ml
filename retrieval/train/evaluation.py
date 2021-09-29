@@ -279,7 +279,7 @@ def evaluate(
         embed_b=txt_emb,
         lens=lengths
     )
-    sims = layers.tensor_to_numpy(sims)
+    #sims = layers.tensor_to_numpy(sims)
     end_sim = dt()
 
     i2t_metrics = i2t(sims)
