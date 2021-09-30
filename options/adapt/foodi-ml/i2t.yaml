@@ -1,12 +1,12 @@
 __include__: ../abstract.yaml
 exp:
-  outpath: logs/foodi-ml/adapt_i2t/
+  outpath: runs/sample_foodi_epoch_0/ #logs/foodi-ml/adapt_i2t/
 dataset:  
   vocab_paths: [.vocab_cache/foodiml_vocab.json,]
   train:
     data: foodiml.es #f30k_precomp.en
     workers: 1
-    batch_size: 25 # 128 batch size crashes the GPU memory
+    batch_size: 20 # 128 batch size crashes the GPU memory
   val: 
     data: [foodiml.es] #f30k_precomp.en
     workers: 1
@@ -23,5 +23,5 @@ model:
        k: 36
        gamma: 10
        train_gamma: False
-       device: cuda
-    device: cuda
+       device: cpu
+    device: cpu

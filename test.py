@@ -13,10 +13,15 @@ from retrieval.utils import file_utils, helper
 from retrieval.utils.logger import create_logger
 from run import load_yaml_opts, parse_loader_name, get_data_path
 
+from PIL import PngImagePlugin
+LARGE_ENOUGH_NUMBER = 100
+PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
 
 if __name__ == '__main__':
     args = params.get_test_params()
+    print(args)
     opt = load_yaml_opts(args.options)
+    print(opt)
     logger = create_logger(level='debug' if opt.engine.debug else 'info')
 
     logger.info(f'Used args   : \n{args}')
@@ -25,6 +30,7 @@ if __name__ == '__main__':
     data_path = get_data_path(opt)
 
     loaders = []
+    print(opt.dataset.val.data)
     for data_info in opt.dataset.val.data:
         _, lang = parse_loader_name(data_info)
         loaders.append(

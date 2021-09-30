@@ -20,6 +20,8 @@ def predict_loader(model, data_loader, device):
             leave=False,
         )
     print("Evaluation begins")
+    max_n_samples=1000
+    count=0
     for batch in pbar_fn(data_loader):
         ids = batch['index']
         if len(batch['caption'][0]) == 2:
@@ -33,13 +35,13 @@ def predict_loader(model, data_loader, device):
             if len(img_emb.shape) == 3:
                 is_tensor = True
                 #print(f"Trying to allocate a tensor in CPU of ({len(data_loader.dataset)}, {img_emb.size(1)}, {img_emb.size(2)})")
-                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1), img_emb.size(2)))
-                cap_embs = np.zeros((len(data_loader.dataset), max_n_word, cap_emb.size(2)))
+                img_embs = np.zeros((max_n_samples, img_emb.size(1), img_emb.size(2)))
+                cap_embs = np.zeros((max_n_samples, max_n_word, cap_emb.size(2)))
             else:
                 is_tensor = False
-                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
-                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(1)))
-            cap_lens = [0] * len(data_loader.dataset)
+                img_embs = np.zeros((max_n_samples, img_emb.size(1)))
+                cap_embs = np.zeros((max_n_samples, cap_emb.size(1)))
+            cap_lens = [0] * max_n_samples
         # cache embeddings
         img_embs[ids] = img_emb.data.cpu().numpy()
         if is_tensor:
@@ -49,6 +51,9 @@ def predict_loader(model, data_loader, device):
 
         for j, nid in enumerate(ids):
             cap_lens[nid] = lengths[j]
+        count=count+len(ids)
+        if count==max_n_samples:
+            break
 
     # No redundancy in number of captions per image
     if img_embs.shape[0] == cap_embs.shape[0]:
@@ -135,7 +140,7 @@ def predict_loader_smart(model, data_loader, device):
     #img_emb = img_emb.type(torch.float16)
     #cap_emb = cap_emb.type(torch.float16)
     # random samples used for evaluation
-    max_samples_eval=10000
+    max_samples_eval=20000
     count=0
     for batch in pbar_fn(data_loader):
         ids = batch['index']
@@ -146,23 +151,30 @@ def predict_loader_smart(model, data_loader, device):
         #img_emb, cap_emb = model.forward_batch(batch)
         #img_emb = img_emb.type(torch.float16)
         #cap_emb = cap_emb.type(torch.float16)
+        #print('batch',batch)
         img_emb, cap_emb = model.forward_batch(batch)
         #img_emb = img_emb.type(torch.float16)
         #cap_emb = cap_emb.type(torch.float16)
         if img_embs is None:
             if len(img_emb.shape) == 3:
                 is_tensor = True
-                img_embs = np.zeros((max_samples_eval, img_emb.size(1)), dtype=np.float16)
-                cap_embs = np.zeros((max_samples_eval, cap_emb.size(2)), dtype=np.float16)
+                img_embs = np.zeros((max_samples_eval, img_emb.size(1)), dtype=np.float)
+                cap_embs = np.zeros((max_samples_eval, cap_emb.size(2)), dtype=np.float)
             else:
                 is_tensor = False
-                img_embs = np.zeros((max_samples_eval, img_emb.size(1)), dtype=np.float16)
-                cap_embs = np.zeros((max_samples_eval, cap_emb.size(1)), dtype=np.float16)
+                img_embs = np.zeros((max_samples_eval, img_emb.size(1)), dtype=np.float)
+                cap_embs = np.zeros((max_samples_eval, cap_emb.size(1)), dtype=np.float)
             cap_lens = [0] * max_samples_eval
 
         # cache embeddings
         
+        #img_embs[ids] = img_emb.mean(-1).data.cpu().numpy()
+        #print('img_emb.shape',img_emb.shape)
+        #print('ids:',ids)
+        #print('mean:',img_emb.mean(-1).data.numpy()[:100])
+        #img_embs[ids] = img_emb.mean(-1).data.numpy()
         img_embs[ids] = img_emb.mean(-1).data.cpu().numpy()
+        #print('img_embs[ids]',img_embs[ids][:10])
         cap_emb = cap_emb.to(device)
         cap_emb = cap_emb.permute(0, 2, 1)[...,:34] # To replicate behaviour of line #230 of similarity.py
         cap_emb = model.similarity.similarity.norm(cap_emb)
@@ -176,9 +188,11 @@ def predict_loader_smart(model, data_loader, device):
             txt_output = model.similarity.similarity.fovea(txt_output)
             txt_vector = txt_output.max(dim=-1)[0]
             #print("Text vector size: ", txt_vector.size())
-            cap_embs[i, :] = txt_vector.cpu().numpy()
+            #cap_embs[i, :] = txt_vector.cpu().numpy()
+            cap_embs[i, :] = txt_vector.numpy()
+            #print('cap_embs[ids]',cap_embs[i, :10])
         count=count+len(ids)
-        if count==max_samples_eval-1:
+        if count==max_samples_eval:
             break
         
     '''
@@ -288,7 +302,9 @@ def evaluate(
     end_sim = dt()
 
     i2t_metrics = i2t(sims)
+    print('i2t_metrics:',i2t_metrics)
     t2i_metrics = t2i(sims)
+    print('t2i_metrics:',t2i_metrics)
     rsum = np.sum(i2t_metrics[:3]) + np.sum(t2i_metrics[:3])
 
     i2t_metrics = {f'i2t_{k}': v for k, v in zip(_metrics_, i2t_metrics)}
@@ -370,34 +386,6 @@ def evaluate_bigdata(
 
     return metrics
 
-def i2t(sims):
-    npts, ncaps = sims.shape
-    captions_per_image = ncaps // npts
-
-    ranks = np.zeros(npts)
-    top1 = np.zeros(npts)
-    for index in range(npts):
-        inds = np.argsort(sims[index])[::-1]
-        # Score
-        rank = 1e20
-        begin = captions_per_image * index
-        end = captions_per_image * index + captions_per_image
-        for i in range(begin, end, 1):
-            tmp = np.where(inds == i)[0][0]
-            if tmp < rank:
-                rank = tmp
-        ranks[index] = rank
-        top1[index] = inds[0]
-
-    # Compute metrics
-    r1 = np.round(100.0 * len(np.where(ranks < 1)[0]) / len(ranks),2)
-    r5 = np.round(100.0 * len(np.where(ranks < 5)[0]) / len(ranks),2)
-    r10 = np.round(100.0 * len(np.where(ranks < 10)[0]) / len(ranks),2)
-    medr = np.round(np.floor(np.median(ranks)) + 1,2)
-    meanr = np.round(ranks.mean() + 1,2)
-
-    return (r1, r5, r10, medr, meanr)
-
 def i2t_10(sims):
     # this function will return just the top 10 closest examples
     npts, ncaps = sims.shape
@@ -428,6 +416,45 @@ def i2t_10(sims):
 
     return (r1, r5, r10, medr, meanr)
 
+def i2t_old(sims):
+    npts, ncaps = sims.shape
+    #print('sims shape',sims.shape)
+    #print('sims',sims)
+    captions_per_image = ncaps // npts
+
+    ranks = np.zeros(npts)
+    top1 = np.zeros(npts)
+    #print(sims)
+    print('npts',npts)
+    for index in range(npts):
+        inds = np.argsort(sims[index])[::-1]
+        #print(sims[index])
+        #print(sims[index][inds])
+        #print('inds',inds)
+        # Score
+        rank = 1e20
+        begin = captions_per_image * index
+        print('begin',begin)
+        end = captions_per_image * index + captions_per_image
+        print('end',end)
+        for i in range(begin, end, 1):
+            tmp = np.where(inds == i)[0][0]
+            print('tmp:',tmp)
+            if tmp < rank:
+                rank = tmp
+        print('top1i2t:',inds[0])
+        ranks[index] = rank
+        top1[index] = inds[0]
+
+    # Compute metrics
+    r1 = 100.0 * len(np.where(ranks < 1)[0]) / len(ranks)
+    r5 = 100.0 * len(np.where(ranks < 5)[0]) / len(ranks)
+    r10 = 100.0 * len(np.where(ranks < 10)[0]) / len(ranks)
+    medr = np.round(np.floor(np.median(ranks)) + 1,5)
+    meanr = np.round(ranks.mean() + 1,2)
+
+    return (r1, r5, r10, medr, meanr)
+
 def t2i(sims):
     npts, ncaps = sims.shape
     captions_per_image = ncaps // npts
@@ -442,12 +469,39 @@ def t2i(sims):
             inds = np.argsort(sims[captions_per_image * index + i])[::-1]
             ranks[captions_per_image * index + i] = np.where(inds == index)[0][0]
             top1[captions_per_image * index + i] = inds[0]
+            #print('top1t2i:',inds[0])
 
     # Compute metrics
-    r1 = np.round(100.0 * len(np.where(ranks < 1)[0]) / len(ranks),2)
-    r5 = np.round(100.0 * len(np.where(ranks < 5)[0]) / len(ranks),2)
-    r10 = np.round(100.0 * len(np.where(ranks < 10)[0]) / len(ranks),2)
-    medr = np.round(np.floor(np.median(ranks)) + 1,2)
-    meanr = np.round(ranks.mean() + 1,2)
+    r1 = 100.0 * len(np.where(ranks < 1)[0]) / len(ranks)
+    r5 = 100.0 * len(np.where(ranks < 5)[0]) / len(ranks)
+    r10 = 100.0 * len(np.where(ranks < 10)[0]) / len(ranks)
+    medr = np.round(np.floor(np.median(ranks)) + 1,5)
+    meanr = np.round(ranks.mean() + 1,5)
+
+    return (r1, r5, r10, medr, meanr)
+
+def i2t(sims):
+    # trying newer implementation
+    npts, ncaps = sims.shape
+    captions_per_image = ncaps // npts
+
+    ranks = np.zeros(captions_per_image * npts)
+    top1 = np.zeros(captions_per_image * npts)
+
+    # --> (5N(caption), N(image))
+    #sims = sims.T
+    for index in range(npts):
+        for i in range(captions_per_image):
+            inds = np.argsort(sims[captions_per_image * index + i])[::-1]
+            ranks[captions_per_image * index + i] = np.where(inds == index)[0][0]
+            top1[captions_per_image * index + i] = inds[0]
+            #print('top1i2t:',inds[0])
+
+    # Compute metrics
+    r1 = 100.0 * len(np.where(ranks < 1)[0]) / len(ranks)
+    r5 = 100.0 * len(np.where(ranks < 5)[0]) / len(ranks)
+    r10 = 100.0 * len(np.where(ranks < 10)[0]) / len(ranks)
+    medr = np.round(np.floor(np.median(ranks)) + 1,5)
+    meanr = np.round(ranks.mean() + 1,5)
 
     return (r1, r5, r10, medr, meanr)

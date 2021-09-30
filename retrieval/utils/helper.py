@@ -63,10 +63,14 @@ def load_model(path):
     checkpoint = torch.load(
         path,  map_location=lambda storage, loc: storage
     )
-    vocab_paths = checkpoint['args']['dataset']['vocab_paths']
+    print(checkpoint.keys())
+    #vocab_paths = checkpoint['args']['dataset']['vocab_paths']
+    vocab_paths = [".vocab_cache/foodiml_vocab.json"]
     tokenizers = [Tokenizer(vocab_path=x) for x in vocab_paths]
 
-    model_params = Dict(**checkpoint['args']['model'])
+    # model_params = Dict(**checkpoint['model'])
+    model_params={'model': {'latent_size': 2048, 'txt_enc': {'name': 'gru', 'params': {'embed_dim': 300, 'use_bi_gru': True}, 'pooling': 'none', 'devices': ['cpu']}, 'img_enc': {'name': 'full_image', 'params': {'img_dim': 2048}, 'devices':['cpu'], 'pooling': 'none'}, 'similarity': {'name': 'adapt_i2t', 'params': {'latent_size': 2048, 'gamma': 10, 'train_gamma': False, 'device': 'cpu', 'k': 36}, 'device': 'cpu'}}}
+    model_params = Dict(**model_params["model"])
     model = model.Retrieval(**model_params, tokenizers=tokenizers)
     model.load_state_dict(checkpoint['model'])
 
@@ -105,8 +109,8 @@ def get_tb_writer(logger_path):
 
 
 def get_device(gpu_id):
-    if gpu_id >= 0:
-        return torch.device('cuda:{}'.format(gpu_id))
+#    if gpu_id >= 0:
+#        return torch.device('cuda:{}'.format(gpu_id))
     return torch.device('cpu')
 
 

@@ -27,7 +27,7 @@ def freeze(module):
 class Trainer:
 
     def __init__(
-        self, model=None, device=torch.device('cuda'), world_size=1,
+        self, model=None, device=torch.device('cpu'), world_size=1,
         args=None, sysoutlog=tqdm.write, master=True,  path='runs/'
     ):
         self.model = model
@@ -285,6 +285,7 @@ class Trainer:
             loader_name = str(loader.dataset)
             self.sysoutlog(f'Evaluating {i+1:2d}/{nb_loaders:2d} - {loader_name}')
             print("evaluation.predict_loader begins")
+            #img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
             img_emb, txt_emb, lens = evaluation.predict_loader_smart(self.model, loader, self.device)
             #img_emb, txt_emb, lens = evaluation.predict_loader_smart_debug(self.model, loader, self.device)
             #print("img_emb.size() = ", img_emb.size())

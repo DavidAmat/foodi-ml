@@ -117,21 +117,26 @@ class Similarity(nn.Module):
         cap_embed = l2norm_numpy(cap_embed, dim=-1)
         #print("cap_embed.size(): ", cap_embed.size())
         #print("img_embed.size(): ", img_embed.size())
-        d = np.zeros((len(img_embed), len(cap_embed)), dtype=np.float16)
+        d = np.zeros((len(img_embed), len(cap_embed)), dtype=np.float)
         print('GASRRAY IN MEMORY')
         l=len(img_embed)
         for i, img_tensor in enumerate(img_embed):
             #img_vector = img_tensor.unsqueeze(0)
             img_vector = np.expand_dims(img_tensor,0)
             img_vector = l2norm_numpy(img_vector, dim=-1)
-            txt_vector = np.expand_dims(cap_embed[i],0)
+            txt_vector = np.expand_dims(cap_embed,0)
+            #print('img_vector',img_vector.shape)
+            #print('txt_vector',txt_vector.shape)
             #img_vector = l2norm(img_vector, dim=-1)
             #print("img_vector.size(): ", img_vector.size())
             #print("txt_vector.size(): ", txt_vector.size())
             #sim = cosine_sim(img_vector, cap_embed)
-            sim = cosine_sim_numpy(img_vector, txt_vector)
-            sim = sim.squeeze(-1)
+            sim = cosine_sim_numpy(img_vector, cap_embed)
+            #print('sim:',sim)
+            #sim = sim.squeeze(-1)
+            #print('sim_shape',sim.shape)
             d[i,:] = sim
+            #print('sim:',sim)
         print('foor loop done')
         
             
@@ -185,7 +190,7 @@ class Similarity_Ev(Similarity):
             f'Similarity - img_shape: {img_embed.shape} '
             'cap_shape: {cap_embed.shape}'
         ))
-        print(self.similarity)
+        #print(self.similarity)
         return self.similarity(img_embed, cap_embed, lens)
 
     def forward_shared(self, img_embed, cap_embed, lens, shared_size=128):
@@ -436,8 +441,8 @@ class AdaptiveEmbeddingI2T(nn.Module):
         # Global image representation
         #img_embed = img_embed.mean(-1)
         #print("forward eval ----------------")
-        print("img_embed.size(): ", img_embed.size())
-        print("cap_emb.size(): ", cap_embed.size())
+        #print("img_embed.size(): ", img_embed.size())
+        #print("cap_emb.size(): ", cap_embed.size())
         for i, img_tensor in enumerate(img_embed):
             
             img_vector = img_tensor.unsqueeze(0) # 1, 2048
