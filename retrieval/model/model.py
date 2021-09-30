@@ -95,10 +95,10 @@ class Retrieval(nn.Module):
 
         logger.info(f'Using similarity: {similarity.name,}')
 
-    def set_devices_(self, txt_devices=['cpu'], img_devices=['cpu'], loss_device='cpu'):
+    def set_devices_(self, txt_devices=['cuda'], img_devices=['cuda'], loss_device='cuda'):
         if len(txt_devices) > 1:
             self.txt_enc = data_parallel.DataParallel(self.txt_enc)
-            self.txt_enc.device = torch.device('cpu')
+            self.txt_enc.device = torch.device('cuda')
         elif len(txt_devices) == 1:
             try:
                 self.txt_enc.to(txt_devices[0])
@@ -108,7 +108,7 @@ class Retrieval(nn.Module):
 
         if len(img_devices) > 1:
             self.img_enc = data_parallel.DataParallel(self.img_device)
-            self.img_enc.device = torch.device('cpu')
+            self.img_enc.device = torch.device('cuda')
         elif len(img_devices) == 1:
             self.img_enc.to(img_devices[0])
             self.img_enc.device = torch.device(img_devices[0])

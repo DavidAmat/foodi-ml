@@ -27,7 +27,7 @@ def freeze(module):
 class Trainer:
 
     def __init__(
-        self, model=None, device=torch.device('cpu'), world_size=1,
+        self, model=None, device=torch.device('cuda'), world_size=1,
         args=None, sysoutlog=tqdm.write, master=True,  path='runs/'
     ):
         self.model = model

@@ -140,7 +140,7 @@ def predict_loader_smart(model, data_loader, device):
     #img_emb = img_emb.type(torch.float16)
     #cap_emb = cap_emb.type(torch.float16)
     # random samples used for evaluation
-    max_samples_eval=20000
+    max_samples_eval=26878
     count=0
     for batch in pbar_fn(data_loader):
         ids = batch['index']
@@ -177,6 +177,7 @@ def predict_loader_smart(model, data_loader, device):
         #print('img_embs[ids]',img_embs[ids][:10])
         cap_emb = cap_emb.to(device)
         cap_emb = cap_emb.permute(0, 2, 1)[...,:34] # To replicate behaviour of line #230 of similarity.py
+        #print(cap_emb.device)
         cap_emb = model.similarity.similarity.norm(cap_emb)
         for i in ids:
             #print("i: ", i)
@@ -189,7 +190,10 @@ def predict_loader_smart(model, data_loader, device):
             txt_vector = txt_output.max(dim=-1)[0]
             #print("Text vector size: ", txt_vector.size())
             #cap_embs[i, :] = txt_vector.cpu().numpy()
-            cap_embs[i, :] = txt_vector.numpy()
+            
+            #cap_embs[i, :] = txt_vector.numpy()
+            cap_embs[i, :] = txt_vector.cpu().numpy()
+            
             #print('cap_embs[ids]',cap_embs[i, :10])
         count=count+len(ids)
         if count==max_samples_eval:

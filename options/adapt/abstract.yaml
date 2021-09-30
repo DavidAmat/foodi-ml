@@ -19,12 +19,12 @@ model:
       use_bi_gru: true
       #add_rand_embed: true
     pooling: none
-    devices: [cpu,]
+    devices: [cuda,]
   img_enc:
     name: full_image #simple
     params:
       img_dim: 2048
-    devices: [cpu,]
+    devices: [cuda,]
     pooling: none
   similarity:
     name: cosine
@@ -32,8 +32,8 @@ model:
       latent_size: 2048
       gamma: 10
       train_gamma: False
-      device: cpu
-    device: cpu
+      device: cuda
+    device: cuda
 optimizer:
   name: adamax
   params:
