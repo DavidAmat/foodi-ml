@@ -68,8 +68,17 @@ def load_model(path):
     vocab_paths = [".vocab_cache/foodiml_vocab.json"]
     tokenizers = [Tokenizer(vocab_path=x) for x in vocab_paths]
 
+    similarity_eval_keys = []
+    for k,v in checkpoint["model"].items():
+        if "similarity_eval" in k:
+            print("popping key: ", k)
+            similarity_eval_keys.append(k)
+    for k in similarity_eval_keys:
+        checkpoint["model"].pop(k)
+    
     # model_params = Dict(**checkpoint['model'])
     model_params={'model': {'latent_size': 2048, 'txt_enc': {'name': 'gru', 'params': {'embed_dim': 300, 'use_bi_gru': True}, 'pooling': 'none', 'devices': ['cpu']}, 'img_enc': {'name': 'full_image', 'params': {'img_dim': 2048}, 'devices':['cpu'], 'pooling': 'none'}, 'similarity': {'name': 'adapt_i2t', 'params': {'latent_size': 2048, 'gamma': 10, 'train_gamma': False, 'device': 'cpu', 'k': 36}, 'device': 'cpu'}}}
+    
     model_params = Dict(**model_params["model"])
     model = model.Retrieval(**model_params, tokenizers=tokenizers)
     model.load_state_dict(checkpoint['model'])

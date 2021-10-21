@@ -32,13 +32,6 @@ def cosine_sim(im, s,):
         Cosine similarity between all the
         image and sentence pairs
     """
-    #print("im shape: ", im.size())
-    #print("im: ", im)
-    #print("cap_embed shape: ", s.size())
-    #print("cap_embed: ", s)
-    res = im.mm(s.t())
-    #print("res.size(): ", res.size())
-    #print("res: ", res)
     return im.mm(s.t())
 
 
@@ -47,12 +40,5 @@ def cosine_sim_numpy(im, s):
         Cosine similarity between all the
         image and sentence pairs
     """
-    #print("im shape: ", im.shape)
-    #print("im: ", im)
-    #print("cap_embed shape: ", s.shape)
-    #print("cap_embed: ", s)
-    res = im.dot(s.T)
-    #print("res.shape: ", res.shape)
-    #print("res: ", res)
     return im.dot(s.T)
 

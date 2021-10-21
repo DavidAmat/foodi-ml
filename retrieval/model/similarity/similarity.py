@@ -71,99 +71,9 @@ class Similarity(nn.Module):
                 sim = self.forward(im, s, l)
                 d[im_start:im_end, cap_start:cap_end] = sim
         logger.debug('Done computing shared similarities.')
-        return d
+        return d 
     
-    def forward_shared_eval(self, img_embed, cap_embed, lens, shared_size=128):
-        """
-        Compute pairwise i2t image-caption distance with locality sharding
-        """
 
-        #img_embed = img_embed.to(self.device)
-        #cap_embed = cap_embed.to(self.device)
-
-        #print("n_im_shard: ", n_im_shard)
-        #print("n_cap_shard: ", n_cap_shard)
-        logger.debug('Calculating shared similarities')
-        img_embed=img_embed.cpu().numpy()
-        cap_embed=cap_embed.cpu().numpy()
-        cap_embed = l2norm_numpy(cap_embed, dim=-1)
-        #print("cap_embed.size(): ", cap_embed.size())
-        #print("img_embed.size(): ", img_embed.size())
-        d = np.zeros((len(img_embed), len(cap_embed)), dtype=np.float)
-        print('GASRRAY IN MEMORY')
-        l=len(img_embed)
-        for i, img_tensor in enumerate(img_embed):
-            #print(img_tensor)
-            #img_vector = img_tensor.unsqueeze(0)
-            img_vector = np.expand_dims(img_tensor,0)
-            img_vector = l2norm_numpy(img_vector, dim=-1)
-            #txt_vector = np.expand_dims(cap_embed,0)
-            print('img_vector',img_vector.shape)
-            print('cap_embed',cap_embed)
-            print("cap_embed.shape: ", cap_embed.shape)
-            #img_vector = l2norm(img_vector, dim=-1)
-            #print("img_vector.size(): ", img_vector.size())
-            #print("txt_vector.size(): ", txt_vector.size())
-            #sim = cosine_sim(img_vector, cap_embed)
-            #print("img_vector before similarity = ", img_vector)
-            #print("cap_embed before similarity = ", cap_embed)
-            sim = cosine_sim_numpy(img_vector, cap_embed)
-            #print('sim:',sim)
-            #sim = sim.squeeze(-1)
-            d[i,:] = sim
-            print("Sim for row i=0 --> sim[i,:] = ", sim)
-            #break # DELETE
-        print('foor loop done')
-        
-        logger.debug('Done computing shared similarities.')
-        return d
-
-class Similarity_Ev(Similarity):
-        
-    def forward(self, img_embed, cap_embed, lens, shared=False):
-        logger.debug((
-            f'Similarity - img_shape: {img_embed.shape} '
-            'cap_shape: {cap_embed.shape}'
-        ))
-        #print(self.similarity)
-        return self.similarity(img_embed, cap_embed, lens)
-
-    def forward_shared(self, img_embed, cap_embed, lens, shared_size=128):
-        """
-        Compute pairwise i2t image-caption distance with locality sharding
-        """
-
-        #img_embed = img_embed.to(self.device)
-        #cap_embed = cap_embed.to(self.device)
-
-        n_im_shard = (len(img_embed)-1)//shared_size + 1
-        n_cap_shard = (len(cap_embed)-1)//shared_size + 1
-
-        logger.debug('Calculating shared similarities')
-
-        pbar_fn = lambda x: range(x)
-        if self.master:
-            pbar_fn = lambda x: tqdm(
-                range(x), total=x,
-                desc='Test  ',
-                leave=False,
-            )
-
-        d = torch.zeros(len(img_embed), len(cap_embed)).cpu()
-        for i in pbar_fn(n_im_shard):
-            im_start = shared_size*i
-            im_end = min(shared_size*(i+1), len(img_embed))
-            for j in range(n_cap_shard):
-                cap_start = shared_size*j
-                cap_end = min(shared_size*(j+1), len(cap_embed))
-                im = img_embed[im_start:im_end]
-                s = cap_embed[cap_start:cap_end]
-                l = lens[cap_start:cap_end]
-                sim = self.forward(im, s, l)
-                d[im_start:im_end, cap_start:cap_end] = sim
-
-        logger.debug('Done computing shared similarities.')
-        return d
 class Cosine(nn.Module):
 
     def __init__(self, device, latent_size=1024):
@@ -221,7 +131,7 @@ class Normalization(nn.Module):
     def forward(self, x):
         return self.norm(x)
 
-# FIND
+    
 class AdaptiveEmbeddingT2I(nn.Module):
 
     def __init__(
@@ -314,16 +224,12 @@ class AdaptiveEmbeddingI2T(nn.Module):
         '''
         # (B, 1024, T)
         #
-        #print("max len: ", max(lens))
-        #print("cap_embed: ", cap_embed.size())
         cap_batch_size, cap_num_words, cap_emb_dim = cap_embed.size()
-        #cap_embed = cap_embed[:, :200, :]
         
         BB, LT, KK = img_embed.shape
         cap_embed = cap_embed.permute(0, 2, 1)[...,:200]
         if LT != self.latent_size:
             img_embed = img_embed.permute(0, 2, 1)
-        #print('img_embed shap sim',img_embed.shape)
 
         cap_embed = self.norm(cap_embed)
     
@@ -333,14 +239,9 @@ class AdaptiveEmbeddingI2T(nn.Module):
         sims = sims.to(self.device)
     
         # Global image representation
-        #print('img_embed shap sim before mean',img_embed.shape)
         img_embed = img_embed.mean(-1)
-        #print("img_embed after mean: ", img_embed)
-        #print("content_of_first_sample of img_embed: ", img_embed[0])
-        #print('img_embed shap sim after mean',img_embed.shape)
         
-        # Refactor of FOVEA module
-        #print("lens: ", lens)
+        # Refactor of FOVEA module to deal with variable sized captions
         mask = -1e10 * torch.ones(cap_embed.size())
         mask = mask.to(cap_embed.get_device())
         for b in range(cap_batch_size):
@@ -349,103 +250,21 @@ class AdaptiveEmbeddingI2T(nn.Module):
         for i, img_tensor in enumerate(img_embed):
             # cap_tensor : B, 1024, T
             # image_embed: 1, 1024
-            img_vector = img_tensor.unsqueeze(0) # 1,1,2048
-            #print('cap_embedshape: ',cap_embed.shape) # cap_embedshape:  torch.Size([1, 2048, 200])
-            #print("cap_embed : ", cap_embed[0,0,:])
-            txt_output = self.adapt_txt(value=cap_embed, query=img_vector)
-            #print("txt_output.size() after adapt_txt: ", txt_output.size()) # torch.Size([1, 2048, 200]))
-            #print(txt_output[0,0,:])
-            txt_output = txt_output + mask # If we do this we get different results w.r.t their previous metrics
+            img_vector = img_tensor.unsqueeze(0) # torch.Size([1, 2048, 200])
+            txt_output = self.adapt_txt(value=cap_embed, query=img_vector) # torch.Size([1, 2048, 200]))
+            txt_output = txt_output + mask # If we do this we get different results w.r.t their previous metrics (padding removal)
             # The line above however makes the code to output the same results as our code
             txt_output = self.fovea(txt_output)
-            #print("txt_output.size() after fovea: ", txt_output.size())
-            #print(txt_output[0,0,:])
-            txt_output = txt_output[:,:,:lens[0]] # This is correct because it preserves their previous metrics
+            txt_output = txt_output[:,:,:lens[0]] # Getting only the txt output until the length of the caption (NO PADDING)
             txt_vector = txt_output.max(dim=-1)[0]
-            #print("txt_vector.size(): ", txt_vector.size())
-            #print(txt_vector)
-            #print("txt_vector[0, :20] after max(dim=-1)[0] = ", txt_vector[0, :20])
-            txt_vector = l2norm(txt_vector, dim=-1)
-            img_vector = l2norm(img_vector, dim=-1)
-            #print("txt_vector before similarity after norm= ", txt_vector[0,:20])
-            #print("img_vector before similarity = ", img_vector)
-            sim = cosine_sim(img_vector, txt_vector)
-            #print("sim.shape: ", sim.shape)
-            sim = sim.squeeze(-1)
-            
-            sims[i,:] = sim
-            #print("similarity sim: ", sim)
-            #print(f"Similarity for row i = {i} ---> sim[i, :] = {sims[i,:]}")
-            #break
-            
-            
-        #print("sims.size(): ", sims.size())
-        return sims
-
-
-class AdaptiveEmbeddingI2T_eval(nn.Module):
-
-    def __init__(
-            self, device, latent_size=1024, k=1,
-            gamma=1, train_gamma=False,
-            normalization='batchnorm', use_fovea=True
-        ):
-        print('new similarity class initialised')
-        super().__init__()
-
-        self.device = device
-        self.latent_size = latent_size
-
-        if normalization:
-            self.norm = Normalization(latent_size, normalization)
-
-        self.adapt_txt = adapt.ADAPT(latent_size, k)
-
-        if use_fovea:
-            self.fovea = Fovea(smooth=gamma, train_smooth=train_gamma)
-        else:
-            self.fovea = nn.Identity()
-
-    def forward(self, img_embed, cap_embed, lens, **kwargs):
-        '''
-            img_embed: (B, 36, latent_size)
-            cap_embed: (B, T, latent_size)
-        '''
-        # (B, 1024, T)
-        #
-        BB, LT, KK = img_embed.shape
-        cap_embed = cap_embed.permute(0, 2, 1)
-        if LT != self.latent_size:
-            img_embed = img_embed.permute(0, 2, 1)
-
-        cap_embed = self.norm(cap_embed)
-
-        sims = torch.zeros(
-            img_embed.shape[0], cap_embed.shape[0]
-        )
-        sims = sims.to(self.device)
-
-        # Global image representation
-        img_embed = img_embed.mean(-1)
-
-        for i, img_tensor in enumerate(img_embed):
-            # cap_tensor : B, 1024, T
-            # image_embed: 1, 1024
-
-            img_vector = img_tensor.unsqueeze(0)
-            txt_output = self.adapt_txt(value=cap_embed, query=img_vector)
-            txt_output = self.fovea(txt_output)
-
-            txt_vector = txt_output.max(dim=-1)[0]
-
             txt_vector = l2norm(txt_vector, dim=-1)
             img_vector = l2norm(img_vector, dim=-1)
             sim = cosine_sim(img_vector, txt_vector)
             sim = sim.squeeze(-1)
-            sims[i,:] = sim
-
+            sims[i,:] = sim            
+            
         return sims
-
+    
 
 class LogSumExp(nn.Module):
     def __init__(self, lambda_lse):

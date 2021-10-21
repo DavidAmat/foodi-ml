@@ -30,7 +30,7 @@ if __name__ == '__main__':
     data_path = get_data_path(opt)
 
     loaders = []
-    print(opt.dataset.val.data)
+    
     for data_info in opt.dataset.val.data:
         _, lang = parse_loader_name(data_info)
         loaders.append(
@@ -57,9 +57,9 @@ if __name__ == '__main__':
         sysoutlog=print_fn,
     )
     
-    result, rs = trainer.evaluate_loaders(loaders)
+    #result, rs = trainer.evaluate_loaders(loaders)
     #logger.info(result)
-    #result, rs = trainer.evaluate_loaders_ponc_NEW_VERSION(loaders)
+    result, rs = trainer.evaluate_loaders_bigdata(loaders)
     logger.info(result)
     if args.outpath is not None:
         outpath = args.outpath
