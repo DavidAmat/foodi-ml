@@ -62,64 +62,6 @@ def predict_loader(model, data_loader, device):
     return img_embs, cap_embs, cap_lens
 
 
-
-@torch.no_grad()
-def new_predict_loader(model, data_loader, device):
-    max_n_word = 154
-    model.eval()
-    pbar_fn = lambda x: x
-    if model.master:
-        pbar_fn = lambda x: tqdm(
-            x, total=len(x),
-            desc='Pred  ',
-            leave=False,
-        )
-    
-    num_samples = len(data_loader.dataset)
-    N = 5
-    N = int(np.ceil(num_samples/(num_samples//N)))
-    num_samples_in_one_index = int(num_samples//N)
-    array_with_amounts = [num_samples_in_one_index] * N
-    array_with_amounts[-1] = num_samples - (N-1)*num_samples_in_one_index
-    img_embs = [None]*N
-    cap_embs = [None]*N
-    
-    for i, batch in enumerate(data_loader):
-        list_index = int(i//num_samples_in_one_index) # 0, 1, ... N-1
-        ids = batch['index']
-        if len(batch['caption'][0]) == 2:
-            (_, _), (_, lengths) = batch['caption']
-        else:
-            cap, lengths = batch['caption']
-        img_emb, cap_emb = model.forward_batch(batch) # Let's try first with batch of 1
-
-        if img_embs[list_index] is None:
-            if len(img_emb.shape) == 3:
-                is_tensor = True
-                img_embs[list_index] = np.zeros((array_with_amounts[list_index], img_emb.size(1), img_emb.size(2)))
-                cap_embs[list_index] = np.zeros((array_with_amounts[list_index], max_n_word, cap_emb.size(2)))
-            else:
-                is_tensor = False
-                img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)))
-                cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(1)))
-            cap_lens = [0] * array_with_amounts[list_index]
-        # cache embeddings
-        img_embs[list_index][ids] = img_emb.data.cpu().numpy()
-        if is_tensor:
-            cap_embs[list_index][ids,:max(lengths),:] = cap_emb.data.cpu().numpy()
-        else:
-            cap_embs[ids,] = cap_emb.data.cpu().numpy()
-
-        for j, nid in enumerate(ids):
-            cap_lens[nid] = lengths[j]
-
-    #if img_embs.shape[0] == cap_embs.shape[0]:
-    #    img_embs = remove_img_feat_redundancy(img_embs, data_loader)
-    print("Size of the matrices:")
-    print("imgs_embds[0]: ", imgs_embs[0].size())
-    print("caps_embds[0]: ", caps_embs[0].size())
-    return img_embs, cap_embs, cap_lens # This will be a list in our case
-
 @torch.no_grad()
 def predict_loader_smart(model, data_loader, device):
     img_embs, cap_embs, cap_lens = None, None, None
@@ -142,6 +84,8 @@ def predict_loader_smart(model, data_loader, device):
     # random samples used for evaluation
     max_samples_eval=26878
     count=0
+    # Creating this dictionary to keep the order of appearance of the image_ids
+    
     for batch in pbar_fn(data_loader):
         ids = batch['index']
         if len(batch['caption'][0]) == 2:
@@ -173,6 +117,7 @@ def predict_loader_smart(model, data_loader, device):
         #print('ids:',ids)
         #print('mean:',img_emb.mean(-1).data.numpy()[:100])
         #img_embs[ids] = img_emb.mean(-1).data.numpy()
+        
         img_embs[ids] = img_emb.mean(-1).data.cpu().numpy()
         #print('img_embs[ids]',img_embs[ids][:10])
         cap_emb = cap_emb.to(device)
@@ -215,56 +160,6 @@ def predict_loader_smart(model, data_loader, device):
     
     return img_embs, cap_embs, cap_lens
 
-@torch.no_grad()
-def predict_loader_smart_debug(model, data_loader, device):
-    img_embs, cap_embs, cap_lens = None, None, None
-    max_n_word = 200
-    model.eval()
-
-    
-    pbar_fn = lambda x: x
-    if model.master:
-        pbar_fn = lambda x: tqdm(
-            x, total=len(x),
-            desc='Pred  ',
-            leave=False,
-        )
-    #print("Evaluation begins")
-    k=True
-    
-    batch = next(iter(data_loader))
-    ids = batch['index']
-    if len(batch['caption'][0]) == 2:
-        (_, _), (_, lengths) = batch['caption']
-    else:
-        cap, lengths = batch['caption']
-    #img_emb, cap_emb = model.forward_batch(batch)
-    #img_emb = img_emb.type(torch.float16)
-    #cap_emb = cap_emb.type(torch.float16)
-    img_emb, cap_emb = model.forward_batch(batch)
-    img_emb = img_emb.type(torch.float16)
-    cap_emb = cap_emb.type(torch.float16)
-    if img_embs is None:
-        if len(img_emb.shape) == 3:
-            is_tensor = True
-            img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
-            cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(2)), dtype=np.float16)
-        else:
-            is_tensor = False
-            img_embs = np.zeros((len(data_loader.dataset), img_emb.size(1)), dtype=np.float16)
-            cap_embs = np.zeros((len(data_loader.dataset), cap_emb.size(1)), dtype=np.float16)
-        cap_lens = [0] * len(data_loader.dataset)
-
-        for j, nid in enumerate(ids):
-            cap_lens[nid] = lengths[j]
-        #print("Finished one batch")
-    # No redundancy in number of captions per image
-    #if img_embs.shape[0] == cap_embs.shape[0]:
-    #    img_embs = remove_img_feat_redundancy(img_embs, data_loader)
-    
-    return img_embs, cap_embs, cap_lens
-
-
 
 def remove_img_feat_redundancy(img_embs, data_loader):
         return img_embs[np.arange(
@@ -275,11 +170,10 @@ def remove_img_feat_redundancy(img_embs, data_loader):
 
     
     
-    
 @torch.no_grad()
 def evaluate(
     model, img_emb, txt_emb, lengths,
-    device, shared_size=128, return_sims=False
+    device, valid_answers, shared_size=128, return_sims=False
 ):
     model.eval()
     _metrics_ = ('r1', 'r5', 'r10', 'medr', 'meanr')
@@ -291,87 +185,24 @@ def evaluate(
     #img_emb = torch.FloatTensor(img_emb)
     #txt_emb = torch.FloatTensor(txt_emb)
     end_pred = dt()
-    #sims = model.get_sim_matrix_shared(
-    #    embed_a=img_emb, 
-    #    embed_b=txt_emb,
-    #    lens=lengths
-    #)
-    print("Beginning get_sim_matrix_shared_eval")
-    sims = model.get_sim_matrix_eval(
+    sims = model.get_sim_matrix_shared(
         embed_a=img_emb, 
         embed_b=txt_emb,
         lens=lengths
     )
+    print("Beginning get_sim_matrix_shared_eval")
+    #sims = model.get_sim_matrix_eval(
+    #    embed_a=img_emb, 
+    #    embed_b=txt_emb,
+    #    lens=lengths,
+    #)
     #sims = layers.tensor_to_numpy(sims)
     end_sim = dt()
 
-    i2t_metrics = i2t(sims)
+    i2t_metrics = i2t_old(sims, valid_answers)
     print('i2t_metrics:',i2t_metrics)
-    t2i_metrics = t2i(sims)
+    t2i_metrics = t2i(sims, valid_answers)
     print('t2i_metrics:',t2i_metrics)
-    rsum = np.sum(i2t_metrics[:3]) + np.sum(t2i_metrics[:3])
-
-    i2t_metrics = {f'i2t_{k}': v for k, v in zip(_metrics_, i2t_metrics)}
-    t2i_metrics = {f't2i_{k}': v for k, v in zip(_metrics_, t2i_metrics)}
-
-    metrics = {
-        'pred_time': end_pred-begin_pred,
-        'sim_time': end_sim-end_pred,
-    }
-    metrics.update(i2t_metrics)
-    metrics.update(t2i_metrics)
-    metrics['rsum'] = rsum
-
-    if return_sims:
-        return metrics, sims
-
-    return metrics
-
-@torch.no_grad()
-def evaluate_bigdata(
-    model, img_emb, txt_emb, lengths,
-    device, shared_size=128, return_sims=False
-):
-    model.eval()
-    _metrics_ = ('r1', 'r5', 'r10', 'medr', 'meanr')
-
-    # img_emb and txt_emb are way too large to fit in the GPU. 
-    # however note that the similarity matrix is just needed to calculate the K closest examples
-    # in i2t and t2i, one thing that we could do is break down the similarity matrix in N pieces and then do
-    # k closest of k closest
-    # 1: break down array into sub arrays
-    image_subarrays = np.split(img_emb,10)
-    text_subarrays = np.split(txt_emb,10)
-    # 2: for each array find the similarity matrix
-    for image_array,text_array in zip(image_subarrays,text_subarrays):
-        img_emb_s = torch.FloatTensor(image_array).to(device)
-        txt_emb_s = torch.FloatTensor(text_array).to(device)
-        small_sims = model.get_sim_matrix_eval(
-        embed_a=img_emb_s, 
-        embed_b=txt_emb_s,
-        lens=lengths
-    )
-        sims = layers.tensor_to_numpy(sims)
-        # 3: calculate the closest examples and save them into sub-matrices
-        i2t_metrics = i2t_10(sims)
-        t2i_metrics = t2i(sims)
-    # calculate th closest in the closest and get final metrics
-
-    
-    begin_pred = dt()
-
-
-    
-    end_pred = dt()
-    sims = model.get_sim_matrix_eval(
-        embed_a=img_emb, 
-        embed_b=txt_emb,
-        lens=lengths
-    )
-    end_sim = dt()
-
-    i2t_metrics = i2t(sims)
-    t2i_metrics = t2i(sims)
     rsum = np.sum(i2t_metrics[:3]) + np.sum(t2i_metrics[:3])
 
     i2t_metrics = {f'i2t_{k}': v for k, v in zip(_metrics_, i2t_metrics)}
@@ -422,20 +253,13 @@ def i2t_10(sims):
 
 def i2t_old(sims):
     npts, ncaps = sims.shape
-    #print('sims shape',sims.shape)
-    #print('sims',sims)
     captions_per_image = ncaps // npts
 
     ranks = np.zeros(npts)
     top1 = np.zeros(npts)
-    #print(sims)
     print('npts',npts)
     for index in range(npts):
         inds = np.argsort(sims[index])[::-1]
-        #print(sims[index])
-        #print(sims[index][inds])
-        #print('inds',inds)
-        # Score
         rank = 1e20
         begin = captions_per_image * index
         print('begin',begin)
@@ -509,3 +333,47 @@ def i2t(sims):
     meanr = np.round(ranks.mean() + 1,5)
 
     return (r1, r5, r10, medr, meanr)
+
+
+def t2i_duplicated_idxs(sims, valid_answers_imgs : dict):
+    npts, ncaps = sims.shape
+    captions_per_image = ncaps//npts
+
+    r_at = {
+        1:np.zeros(captions_per_image * npts),
+        5: np.zeros(captions_per_image * npts),
+        10: np.zeros(captions_per_image * npts)
+        }
+
+    sims = sims.T
+    for index in range(npts):
+        for i in range(captions_per_image): # This is 1 in our case, so there's no loop
+            inds = np.argsort(sims[captions_per_image * index + i])[::-1]
+            for k in r_at.keys(): # 1,5,10
+                intersection = np.intersect1d(inds[:k], valid_answers_imgs[index])
+                r_at[k][captions_per_image * index + i] = (1 if len(intersection) > 0 else 0)
+    r1 = 100.0 * (np.sum(r_at[1])/len(r_at[1]))
+    r5 = 100.0 * (np.sum(r_at[5])/len(r_at[5]))
+    r10 = 100.0 * (np.sum(r_at[10])/len(r_at[10]))
+    return r1, r5, r10
+
+def i2t_duplicated_idxs(sims, valid_answers_caps : dict):
+    npts, ncaps = sims.shape
+    captions_per_image = ncaps//npts
+
+    r_at = {
+        1:np.zeros(captions_per_image * npts),
+        5: np.zeros(captions_per_image * npts),
+        10: np.zeros(captions_per_image * npts)
+    }
+
+    for index in range(npts):
+        for i in range(captions_per_image): # This is 1 in our case, so there's no loop
+            inds = np.argsort(sims[captions_per_image * index + i])[::-1]
+            for k in r_at.keys(): # 1,5,10
+                intersection = np.intersect1d(inds[:k], valid_answers_caps[index])
+                r_at[k][captions_per_image * index + i] = (1 if len(intersection) > 0 else 0)
+    r1 = 100.0 * (np.sum(r_at[1])/len(r_at[1]))
+    r5 = 100.0 * (np.sum(r_at[5])/len(r_at[5]))
+    r10 = 100.0 * (np.sum(r_at[10])/len(r_at[10]))
+    return r1, r5, r10

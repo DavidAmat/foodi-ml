@@ -15,11 +15,13 @@ class FoodiML:
         self.data_split = data_split
         self.data_path = Path(data_path)
         self.samples_path = (
-            self.data_path / 'samples'  # TODO: change to 'samples'
+            self.data_path / 'samples'
         )
         self.data = load_samples(self.samples_path, self.data_split)
         self.image_ids, self.img_dict, self.img_captions = self._get_img_ids()
-
+        if data_split == 'val' or data_split == "test":
+            self.valid_answers = self._get_valid_answers(self.data)
+        
         logger.info(f'[FoodiML] Loaded {len(self.img_captions)} images annotated ')
 
     def _get_img_ids(self):
@@ -32,6 +34,23 @@ class FoodiML:
 
         return image_ids, img_dict, annotations
 
+    def _get_valid_answers(self, data: pd.DataFrame):
+        """Generates the valid answers taking into account mutiple images and captions. 
+        For the following dataset we will create the dictionary with valid_answers:
+        id    caption    hash    |    valid_answers
+        0     ABC        X       |    0,1,2,4
+        1     EFG        X       |    0,1,4
+        2     ABC        Y       |    0,2
+        3     HIJ        Z       |    3,
+        4     KLM        X       |    0,1,4
+        """
+        valid_answers = {}
+        for i in range(data.shape[0]):
+            idxs_where_duplication = (data["caption"] == data["caption"].iloc[i]) | (data["hash"] == data["hash"].iloc[i])
+            list_indexes_duplication = list(np.where(np.array(idxs_where_duplication.to_list()) == True)[0])
+            valid_answers[data["img_id"].iloc[i]] = list_indexes_duplication
+        return valid_answers
+    
     def get_image_id_by_filename(self, filename):
         return self.img_dict[filename]['imgid']
 
@@ -41,6 +60,12 @@ class FoodiML:
     def get_filename_by_image_id(self, image_id):
         return self.img_dict[image_id]
 
+    def get_valid_answers_imgs(self):
+        return self.valid_answers_imgs
+        
+    def get_valid_answers_caps(self):
+        return self.valid_asnwers_caps
+    
     def __call__(self, filename):
         return self.img_dict[filename]
 

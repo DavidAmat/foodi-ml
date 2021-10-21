@@ -285,16 +285,13 @@ class Trainer:
             loader_name = str(loader.dataset)
             self.sysoutlog(f'Evaluating {i+1:2d}/{nb_loaders:2d} - {loader_name}')
             print("evaluation.predict_loader begins")
-            #img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
-            img_emb, txt_emb, lens = evaluation.predict_loader_smart(self.model, loader, self.device)
-            #img_emb, txt_emb, lens = evaluation.predict_loader_smart_debug(self.model, loader, self.device)
-            #print("img_emb.size() = ", img_emb.size())
-            #print("txt_emb.size() = ", txt_emb.size())
+            img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
+            #img_emb, txt_emb, lens = evaluation.predict_loader_smart(self.model, loader, self.device)
             print("Beginning evaluation.evaluate")
             result = evaluation.evaluate(
                 model=self.model, img_emb=img_emb,
                 txt_emb=txt_emb, lengths=lens,
-                device=self.device, shared_size=128)
+                device=self.device, valid_answers= shared_size=128)
 
             for k, v in result.items():
                 self.sysoutlog(f'{k:<10s}: {v:>6.1f}')

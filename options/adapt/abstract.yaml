@@ -52,7 +52,7 @@ criterion:
   max_violation: False
   beta: 0.991
 engine:
-  eval_before_training: False
+  eval_before_training: True
   print_freq: 300 #6000
   nb_epochs: 50
   early_stop: 20
