@@ -27,7 +27,7 @@ def freeze(module):
 class Trainer:
 
     def __init__(
-        self, model=None, device=torch.device('cpu'), world_size=1,
+        self, model=None, device=torch.device('cuda'), world_size=1,
         args=None, sysoutlog=tqdm.write, master=True,  path='runs/'
     ):
         self.model = model
@@ -285,8 +285,8 @@ class Trainer:
             loader_name = str(loader.dataset)
             self.sysoutlog(f'Evaluating {i+1:2d}/{nb_loaders:2d} - {loader_name}')
             print("evaluation.predict_loader begins")
-            #img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
-            img_emb, txt_emb, lens = evaluation.predict_loader_smart(self.model, loader, self.device)
+            img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
+            #img_emb, txt_emb, lens = evaluation.predict_loader_smart(self.model, loader, self.device)
             #img_emb, txt_emb, lens = evaluation.predict_loader_smart_debug(self.model, loader, self.device)
             #print("img_emb.size() = ", img_emb.size())
             #print("txt_emb.size() = ", txt_emb.size())
@@ -308,6 +308,72 @@ class Trainer:
             final_sum += result[f'{loader_name}/rsum']
         return loader_metrics, final_sum/float(nb_loaders)
 
+    
+    
+    def evaluate_loaders_ponc(self, loaders):
+        loader_metrics = {}
+        final_sum = 0.
+        nb_loaders = len(loaders)
+        print("nb_loaders: ", nb_loaders)
+        for i, loader in enumerate(loaders):
+            loader_name = str(loader.dataset)
+            self.sysoutlog(f'Evaluating {i+1:2d}/{nb_loaders:2d} - {loader_name}')
+            print("evaluation.predict_loader begins")
+            #img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
+            img_emb, txt_emb, lens = evaluation.predict_loader_smart_NEW_VERSION(self.model, loader, self.device)
+            #img_emb, txt_emb, lens = evaluation.predict_loader_smart_debug(self.model, loader, self.device)
+            #print("img_emb.size() = ", img_emb.size())
+            #print("txt_emb.size() = ", txt_emb.size())
+            print("Beginning evaluation.evaluate")
+            result = evaluation.evaluate_ponc(
+                model=self.model, img_emb=img_emb,
+                txt_emb=txt_emb, lengths=lens,
+                device=self.device, shared_size=128)
+
+            for k, v in result.items():
+                self.sysoutlog(f'{k:<10s}: {v:>6.1f}')
+
+            result = {
+                f'{loader_name}/{metric_name}': v
+                for metric_name, v in result.items()
+            }
+
+            loader_metrics.update(result)
+            final_sum += result[f'{loader_name}/rsum']
+        return loader_metrics, final_sum/float(nb_loaders)
+    
+    
+    def evaluate_loaders_ponc_NEW_VERSION(self, loaders):
+        loader_metrics = {}
+        final_sum = 0.
+        nb_loaders = len(loaders)
+        print("nb_loaders: ", nb_loaders)
+        for i, loader in enumerate(loaders):
+            loader_name = str(loader.dataset)
+            self.sysoutlog(f'Evaluating {i+1:2d}/{nb_loaders:2d} - {loader_name}')
+            print("evaluation.predict_loader begins")
+            #img_emb, txt_emb, lens = evaluation.predict_loader(self.model, loader, self.device)
+            sims = evaluation.predict_loader_smart_NEW_VERSION(self.model, loader, self.device)
+            #img_emb, txt_emb, lens = evaluation.predict_loader_smart_debug(self.model, loader, self.device)
+            #print("img_emb.size() = ", img_emb.size())
+            #print("txt_emb.size() = ", txt_emb.size())
+            print("Beginning evaluation.evaluate")
+            result = evaluation.evaluate_ponc_NEW_VERSION(
+                model=self.model, sims=sims,
+                device=self.device, shared_size=128)
+
+            for k, v in result.items():
+                self.sysoutlog(f'{k:<10s}: {v:>6.1f}')
+
+            result = {
+                f'{loader_name}/{metric_name}': v
+                for metric_name, v in result.items()
+            }
+
+            loader_metrics.update(result)
+            final_sum += result[f'{loader_name}/rsum']
+        return loader_metrics, final_sum/float(nb_loaders)
+    
     def save_foodi(self, path=None, is_best=False, epoch=0):
         helper.save_checkpoint_foodi(
             path,

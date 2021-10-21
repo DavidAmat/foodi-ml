@@ -100,6 +100,8 @@ class ImageEncoder(nn.Module):
         # assuming that the precomputed features are already l2-normalized
         features = self.cnn(images)
         B, D, H, W = features.shape
+        
+        #print('shape of features after cnn', features.shape)
         features = features.view(B, D, H*W)
         return features
 

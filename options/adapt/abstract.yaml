@@ -5,7 +5,7 @@ dataset:
     batch_size: 30
     workers: 1
   val:
-    batch_size: 30
+    batch_size: 1
     limit: 5000
   adapt:
     data: []
@@ -19,12 +19,12 @@ model:
       use_bi_gru: true
       #add_rand_embed: true
     pooling: none
-    devices: [cpu,]
+    devices: [cuda,]
   img_enc:
     name: full_image #simple
     params:
       img_dim: 2048
-    devices: [cpu,]
+    devices: [cuda,]
     pooling: none
   similarity:
     name: cosine
@@ -32,8 +32,8 @@ model:
       latent_size: 2048
       gamma: 10
       train_gamma: False
-      device: cpu
-    device: cpu
+      device: cuda
+    device: cuda
 optimizer:
   name: adamax
   params:
@@ -52,8 +52,8 @@ criterion:
   max_violation: False
   beta: 0.991
 engine:
-  eval_before_training: False
+  eval_before_training: True
   print_freq: 300 #6000
-  nb_epochs: 50
+  nb_epochs: 5
   early_stop: 20
   valid_interval: 7020 # before 5, after each epoch now with train 157155 and 25 batch size one epoch lasts 7007 iterations, setting >7007 so we save the model regardless of the evaluation result

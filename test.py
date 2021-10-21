@@ -12,7 +12,7 @@ from retrieval.train.train import Trainer
 from retrieval.utils import file_utils, helper
 from retrieval.utils.logger import create_logger
 from run import load_yaml_opts, parse_loader_name, get_data_path
-
+torch.set_printoptions(precision=8)
 from PIL import PngImagePlugin
 LARGE_ENOUGH_NUMBER = 100
 PngImagePlugin.MAX_TEXT_CHUNK = LARGE_ENOUGH_NUMBER * (1024**2)
@@ -48,18 +48,19 @@ if __name__ == '__main__':
         )
 
     tokenizers = get_tokenizers(loaders[0])
-    model = helper.load_model(f'{opt.exp.outpath}/best_model.pkl')
+    model = helper.load_model(f'{opt.exp.outpath}/best_model_foodi.pkl')
     print_fn = (lambda x: x) if not model.master else tqdm.write
-
+    
     trainer = Trainer(
         model=model,
         args={'args': args, 'model_args': opt.model},
         sysoutlog=print_fn,
     )
-
+    
     result, rs = trainer.evaluate_loaders(loaders)
+    #logger.info(result)
+    #result, rs = trainer.evaluate_loaders_ponc_NEW_VERSION(loaders)
     logger.info(result)
-
     if args.outpath is not None:
         outpath = args.outpath
     else:

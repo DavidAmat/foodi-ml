@@ -23,5 +23,5 @@ model:
        k: 36
        gamma: 10
        train_gamma: False
-       device: cpu
-    device: cpu
+       device: cuda
+    device: cuda
