@@ -255,7 +255,8 @@ class AdaptiveEmbeddingI2T(nn.Module):
             txt_output = txt_output + mask # If we do this we get different results w.r.t their previous metrics (padding removal)
             # The line above however makes the code to output the same results as our code
             txt_output = self.fovea(txt_output)
-            txt_output = txt_output[:,:,:lens[0]] # Getting only the txt output until the length of the caption (NO PADDING)
+            txt_output = txt_output + mask
+            #txt_output = txt_output[:,:,:lens[0]] # Getting only the txt output until the length of the caption (NO PADDING)
             txt_vector = txt_output.max(dim=-1)[0]
             txt_vector = l2norm(txt_vector, dim=-1)
             img_vector = l2norm(img_vector, dim=-1)
