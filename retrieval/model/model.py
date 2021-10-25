@@ -154,6 +154,10 @@ class Retrieval(nn.Module):
         img_embed = self.embed_images(batch['image'].to(self.img_enc.device))
         return img_embed
     
+    def forward_batch_img_DBG(self, batch):
+        img_embed = self.embed_images(batch.to(self.img_enc.device))
+        return img_embed
+    
     def forward_batch_cap(self, batch):
         cap_embed = self.embed_captions(batch)
         return cap_embed

@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
-
+import hashlib
 logger = get_logger()
 
 
@@ -24,9 +24,9 @@ class FoodiML:
 
         logger.info(f'[FoodiML] Loaded {len(self.img_captions)} images annotated ')
         
-        # UNCOMMENT THIS FOR VALIDATION
-        # if data_split == 'val' or data_split == "test":
-        #    self.valid_answers = self._compute_valid_answers(self.data)
+        #UNCOMMENT THIS FOR VALIDATION
+        if data_split == 'val' or data_split == "test":
+            self.valid_answers = self._compute_valid_answers(self.data)
         
     def _get_img_ids(self):
         image_ids = list(self.data["img_id"].values)
@@ -47,12 +47,15 @@ class FoodiML:
         3     HIJ        Z       |    3,
         4     KLM        X       |    0,1,4
         """
+        print(f"Computing hashes of the captions for better performance")
+        data["cap_hash"] = data["caption"].apply(lambda x : hashlib.md5(str.encode(x)).hexdigest())
         valid_answers = {}
-        print("Computing valid answers: ")
-        for i in tqdm(range(data.shape[0])):
-            idxs_where_duplication = (data["caption"] == data["caption"].iloc[i]) | (data["s3_path"] == data["s3_path"].iloc[i])
+        print(f"Computing valid answers for data_split {self.data_split} with shape {data.shape}")
+
+        for i, row in tqdm(data.iterrows()):
+            idxs_where_duplication = (data["cap_hash"] == row["cap_hash"]) | (data["hash"] == row["hash"])
             list_indexes_duplication = list(np.where(np.array(idxs_where_duplication.to_list()) == True)[0])
-            valid_answers[data["img_id"].iloc[i]] = list_indexes_duplication
+            valid_answers[row["img_id"]] = list_indexes_duplication
         return valid_answers
     
     def get_image_id_by_filename(self, filename):

@@ -78,29 +78,57 @@ def predict_loader_bigdata(model, data_loader, device):
         )
     
     max_samples_eval = len(data_loader.dataset)
-    max_samples_eval = 100
+    #max_samples_eval = 100
     count=0
     img_embs = np.zeros((max_samples_eval, 2048), dtype=np.float)
+    PARTIAL_BATCH_SIZE = 35
+    print("Beginning the image part")
+    b = None
     for batch in pbar_fn(data_loader):
         ids = batch['index']
-        img_emb = model.forward_batch_img(batch)
-        # cache embeddings
-        img_embs[ids] = img_emb.mean(-1).data.cpu().numpy()
+        remainder = ids[0]%PARTIAL_BATCH_SIZE
+        #print("ids: ", ids)
+        #print("remainder = ", remainder)
+        if b is None:
+            b = torch.empty(PARTIAL_BATCH_SIZE, *batch["image"].size()[1:])
+            total_ids = [None]*PARTIAL_BATCH_SIZE
+            #print("b size = ", b.size())
+            
+        if remainder == (PARTIAL_BATCH_SIZE - 1):
+            b[remainder] = batch["image"].squeeze(0)
+            total_ids[remainder] = ids[0]
+            #print("FORWARD PASS")
+            #print("b: ", b.size())
+            #print("b: ", b)
+            img_emb = model.forward_batch_img_DBG(b)
+            #print("img_emb adter forward: ", img_emb.size())
+            # cache embeddings
+            #print("total_ids: ", total_ids)
+            #print(img_emb.mean(-1).size())
+            img_embs[total_ids] = img_emb.mean(-1).data.cpu().numpy()
+            
+            b = torch.empty(PARTIAL_BATCH_SIZE, *batch["image"].size()[1:])
+            total_ids = [None] * PARTIAL_BATCH_SIZE
+        else: 
+            b[remainder] = batch["image"].squeeze(0)
+            total_ids[remainder] = ids[0]
+        
         count=count+len(ids)
-
         if count==max_samples_eval:
             break
     
     img_embs = torch.from_numpy(img_embs)
-
-    sims = torch.zeros((len(img_embs), len(img_embs)))
-    sims = sims.to(device)
+    print("Beginning the caption part")
+    sims = np.zeros((len(img_embs), len(img_embs)))
     count = 0    
     for batch in pbar_fn(data_loader):
         ids = batch["index"]
         cap_emb = model.forward_batch_cap(batch)
+        cap_batch_size, cap_num_words, cap_emb_dim = cap_emb.size()
+        cap_emb = cap_emb[:, :min(max_n_word, cap_num_words), :]
         cap_emb = cap_emb.to(device)
-        cap_emb = cap_emb.permute(0, 2, 1)[...,:200] # To replicate behaviour of line #230 of similarity.py
+        cap_emb = cap_emb.permute(0, 2, 1)
+        #cap_emb = cap_emb.permute(0, 2, 1)[...,:200] # To replicate behaviour of line #230 of similarity.py
         cap_emb = model.similarity.similarity.norm(cap_emb)
         for i in range(len(img_embs)):
             img_vector = img_embs[i].unsqueeze(0)
@@ -113,7 +141,7 @@ def predict_loader_bigdata(model, data_loader, device):
             img_vector = l2norm(img_vector, dim=-1)
             sim = cosine_sim(img_vector, txt_vector)
             sim = sim.squeeze(-1)
-            sims[i,batch["index"]] = sim
+            sims[i,batch["index"]] = sim.cpu().numpy()
         count=count+len(ids)
         if count==max_samples_eval:
             break

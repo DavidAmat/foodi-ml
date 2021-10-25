@@ -59,8 +59,8 @@ if __name__ == '__main__':
     
     #result, rs = trainer.evaluate_loaders(loaders)
     #logger.info(result)
-    result, rs = trainer.evaluate_loaders_bigdata(loaders)
-    #result, rs = trainer.evaluate_loaders_bigdata_new_metrics(loaders)
+    #result, rs = trainer.evaluate_loaders_bigdata(loaders)
+    result, rs = trainer.evaluate_loaders_bigdata_new_metrics(loaders)
     
     logger.info(result)
     if args.outpath is not None:
