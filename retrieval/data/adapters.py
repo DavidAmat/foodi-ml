@@ -7,8 +7,8 @@ import numpy as np
 from tqdm import tqdm
 import hashlib
 logger = get_logger()
-
-
+import os
+import pickle
 class FoodiML:
 
     def __init__(self, data_path, data_split):
@@ -20,13 +20,25 @@ class FoodiML:
             self.data_path / 'samples'  # TODO: change to 'samples'
         )
         self.data = load_samples(self.samples_path, self.data_split)
+        print(self.data.columns)
         self.image_ids, self.img_dict, self.img_captions = self._get_img_ids()
 
         logger.info(f'[FoodiML] Loaded {len(self.img_captions)} images annotated ')
         
         #UNCOMMENT THIS FOR VALIDATION
         if data_split == 'val' or data_split == "test":
-            self.valid_answers = self._compute_valid_answers(self.data)
+            if not os.path.isfile("/home/ec2-user/SageMaker/foodi-ml/valid_answers.pickle"): 
+                self.valid_answers = self._compute_valid_answers(self.data)
+            else:
+                with open("/home/ec2-user/SageMaker/foodi-ml/valid_answers.pickle", 'rb') as handle:
+                    #self.valid_answers = pickle.load(handle)
+                    self.valid_answers = self._compute_valid_answers(self.data)
+            
+            """
+            with open('/home/ec2-user/SageMaker/foodi-ml/valid_answers.pickle', 'wb') as handle:
+                print("Saving valid_answers")
+                pickle.dump(self.valid_answers, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                print("Correctly saved valid_answers")"""
         
     def _get_img_ids(self):
         image_ids = list(self.data["img_id"].values)
