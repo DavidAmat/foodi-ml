@@ -64,10 +64,11 @@ def predict_loader(model, data_loader, device):
     return img_embs, cap_embs, cap_lens
 
 
+
 @torch.no_grad()
 def predict_loader_bigdata(model, data_loader, device):
     img_embs, cap_embs, cap_lens = None, None, None
-    max_n_word = 200
+    max_n_word = 100
     model.eval()
     pbar_fn = lambda x: x
     if model.master:
@@ -78,7 +79,7 @@ def predict_loader_bigdata(model, data_loader, device):
         )
     
     max_samples_eval = len(data_loader.dataset)
-    #max_samples_eval = 100
+    #max_samples_eval = 70
     count=0
     img_embs = np.zeros((max_samples_eval, 2048), dtype=np.float)
     PARTIAL_BATCH_SIZE = 35
@@ -112,49 +113,126 @@ def predict_loader_bigdata(model, data_loader, device):
     
     img_embs = torch.from_numpy(img_embs)
     print("Beginning the caption part")
+    
     t2i_r_at = {
         1:np.zeros(max_samples_eval),
         5: np.zeros(max_samples_eval),
         10: np.zeros(max_samples_eval)
     }
     
-    #sims = np.zeros((len(data_loader), len(data_lader)))
-    with h5py.File("my_sims.hdf5", "w") as f:
-        sims = f.create_dataset("sims_dataset", (len(data_loader), len(data_loader)), dtype=np.float32)
-        count = 0    
-        for batch in pbar_fn(data_loader):
+    i2t_r_at = {
+        1:np.zeros(max_samples_eval),
+        5: np.zeros(max_samples_eval),
+        10: np.zeros(max_samples_eval)
+    }
+    
+    
+    
+    
+    count = 0    
+    for batch in pbar_fn(data_loader):
+        sims = np.zeros((max_samples_eval, 1))
+        ids = batch["index"]
+
+        cap_emb = model.forward_batch_cap(batch)
+        cap_batch_size, cap_num_words, cap_emb_dim = cap_emb.size()
+        cap_emb = cap_emb[:, :min(max_n_word, cap_num_words), :]
+        cap_emb = cap_emb.to(device)
+        cap_emb = cap_emb.permute(0, 2, 1)
+        cap_emb = model.similarity.similarity.norm(cap_emb)
+        for i in range(len(img_embs)):
+            img_vector = img_embs[i].unsqueeze(0)
+            img_vector = img_vector.float()
+            img_vector = img_vector.to(device)
+            
+            txt_output = model.similarity.similarity.adapt_txt(value=cap_emb, query=img_vector)
+            txt_output = model.similarity.similarity.fovea(txt_output)
+            txt_vector = txt_output.max(dim=-1)[0]
+            txt_vector = l2norm(txt_vector, dim=-1)
+            
+            img_vector = l2norm(img_vector, dim=-1)
+
+            sim = cosine_sim(img_vector, txt_vector)
+            sim = sim.squeeze(-1)
+            sims[i, 0] = sim.cpu().numpy()
+        
+        # compute t2i for this given column of the similarity matrix
+        index = ids[0]
+        image_id = data_loader.dataset.data_wrapper.image_ids[index]
+        inds = np.argsort(sims[:,0])[::-1]
+        for k in t2i_r_at.keys(): # 1,5,10
+            intersection = np.intersect1d(inds[:k], data_loader.dataset.data_wrapper.valid_answers[image_id])
+            t2i_r_at[k][index] = (1 if len(intersection) > 0 else 0)
+            
+        count=count+len(ids)
+
+        if count==max_samples_eval:
+            #i2t_metrics = i2t_duplicated_idxs(sims, data_loader.dataset.data_wrapper.valid_answers, data_loader.dataset.data_wrapper)
+            r1 = 100.0 * (np.sum(t2i_r_at[1])/len(t2i_r_at[1]))
+            r5 = 100.0 * (np.sum(t2i_r_at[5])/len(t2i_r_at[5]))
+            r10 = 100.0 * (np.sum(t2i_r_at[10])/len(t2i_r_at[10]))
+            print(f"t2i_metrics: ", r1, r5, r10)
+            
+            #t2i_metrics = t2i_duplicated_idxs(sims, data_loader.dataset.data_wrapper.valid_answers, data_loader.dataset.data_wrapper)
+            #print("i2t_metrics: ", t2i_metrics)    
+            break
+            
+    count = 0  
+        
+    print("FINISHED T2I")
+    print("--------------")
+    print("Computing I2T")
+    """img_Embeds = np.zeros((284000, 2048))
+    max_samples_eval = 284000
+    cap_embeds = np.zeros((max_samples_eval, 2048, max_n_word))
+    
+    for i in pbar_fn(range(len(img_embs))):
+        img_vector = img_embs[i].unsqueeze(0)
+        img_vector = img_vector.float()
+        img_vector = img_vector.to(device)
+        img_vector = l2norm(img_vector, dim=-1)
+        
+        sims = np.zeros((1, max_samples_eval))
+        
+        for batch in data_loader:
             ids = batch["index"]
             cap_emb = model.forward_batch_cap(batch)
             cap_batch_size, cap_num_words, cap_emb_dim = cap_emb.size()
             cap_emb = cap_emb[:, :min(max_n_word, cap_num_words), :]
             cap_emb = cap_emb.to(device)
             cap_emb = cap_emb.permute(0, 2, 1)
-            #cap_emb = cap_emb.permute(0, 2, 1)[...,:200] # To replicate behaviour of line #230 of similarity.py
             cap_emb = model.similarity.similarity.norm(cap_emb)
-            for i in range(len(img_embs)):
-                img_vector = img_embs[i].unsqueeze(0)
-                img_vector = img_vector.float()
-                img_vector = img_vector.to(device)
-                txt_output = model.similarity.similarity.adapt_txt(value=cap_emb, query=img_vector)
-                txt_output = model.similarity.similarity.fovea(txt_output)
-                txt_vector = txt_output.max(dim=-1)[0]
-                txt_vector = l2norm(txt_vector, dim=-1)
-                img_vector = l2norm(img_vector, dim=-1)
-                sim = cosine_sim(img_vector, txt_vector)
-                sim = sim.squeeze(-1)
-                sims[i,batch["index"]] = sim.cpu().numpy()
-                #sims[i, 0] = sim.cpu().numpy()
-
-            count=count+len(ids)
-
-            if count==max_samples_eval:
-                i2t_metrics = i2t_duplicated_idxs(sims, data_loader.dataset.data_wrapper.valid_answers, data_loader.dataset.data_wrapper)
-                print(f"i2t_metrics: ", i2t_metrics)
-                t2i_metrics = t2i_duplicated_idxs(sims, data_loader.dataset.data_wrapper.valid_answers, data_loader.dataset.data_wrapper)
-                print("t2i_metrics: ", t2i_metrics)
-                
-                break
             
+            txt_output = model.similarity.similarity.adapt_txt(value=cap_emb, query=img_vector)
+            txt_output = model.similarity.similarity.fovea(txt_output)
+            txt_vector = txt_output.max(dim=-1)[0]
+            txt_vector = l2norm(txt_vector, dim=-1)
+
+            sim = cosine_sim(img_vector, txt_vector)
+            sim = sim.squeeze(-1)
+            sims[0, i] = sim.cpu().numpy()
+        
+        # compute t2i for this given column of the similarity matrix
+        image_id = data_loader.dataset.data_wrapper.image_ids[i]
+        inds = np.argsort(sims[0, :])[::-1]
+        for k in i2t_r_at.keys(): # 1,5,10
+            intersection = np.intersect1d(inds[:k], data_loader.dataset.data_wrapper.valid_answers[image_id])
+            i2t_r_at[k][i] = (1 if len(intersection) > 0 else 0)
+            
+        count=count+len(ids)
+
+        if count==max_samples_eval:
+            
+            r1 = 100.0 * (np.sum(i2t_r_at[1])/len(i2t_r_at[1]))
+            r5 = 100.0 * (np.sum(i2t_r_at[5])/len(i2t_r_at[5]))
+            r10 = 100.0 * (np.sum(i2t_r_at[10])/len(i2t_r_at[10]))
+            print(f"i2t_metrics: ", r1, r5, r10)
+            
+            #t2i_metrics = t2i_duplicated_idxs(sims, data_loader.dataset.data_wrapper.valid_answers, data_loader.dataset.data_wrapper)
+            #print("i2t_metrics: ", t2i_metrics)    
+            break"""
+        
+        
     return sims
 
 
@@ -362,7 +440,7 @@ def t2i_duplicated_idxs(sims, valid_answers_imgs : dict, adapter):
 def i2t_duplicated_idxs(sims, valid_answers_caps : dict, adapter):
     npts, ncaps = sims.shape
     captions_per_image = ncaps//npts
-
+    
     r_at = {
         1:np.zeros(captions_per_image * npts),
         5: np.zeros(captions_per_image * npts),
@@ -375,6 +453,7 @@ def i2t_duplicated_idxs(sims, valid_answers_caps : dict, adapter):
         for k in r_at.keys(): # 1,5,10
             intersection = np.intersect1d(inds[:k], valid_answers_caps[image_id])
             r_at[k][captions_per_image * index] = (1 if len(intersection) > 0 else 0)
+            
     r1 = 100.0 * (np.sum(r_at[1])/len(r_at[1]))
     r5 = 100.0 * (np.sum(r_at[5])/len(r_at[5]))
     r10 = 100.0 * (np.sum(r_at[10])/len(r_at[10]))
